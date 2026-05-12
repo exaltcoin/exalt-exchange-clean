@@ -1,0 +1,16 @@
+{
+  "name": "exalt-exchange-phase1",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start:backend": "cd backend && npm start"
+  },
+  "dependencies": {
+    "ethers": "^6.16.0",
+    "mongodb": "^7.2.0",
+    "mongoose": "^9.6.2"
+  }
+}
