@@ -18,7 +18,7 @@ cd backend
 npm install
 npm start
 ```
-Backend: http://localhost:3000
+Backend: http://https://exalt-exchange-backend.onrender.com:3000
 
 ## Run frontend
 Open a new terminal:
@@ -27,7 +27,7 @@ cd frontend
 npm install
 npm run dev
 ```
-Frontend: http://localhost:5173
+Frontend: http://https://exalt-exchange-backend.onrender.com:5173
 
 ## Next upgrades
 - WalletConnect / MetaMask
