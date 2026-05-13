@@ -103,7 +103,7 @@ app.get("/api/listings", async (req, res) => {
 
 
 
-app.post("/api/listings/status", adminAuth, async (req, res) => {
+   app.post("/api/listings/status", async (req, res) => {
   try {
     const { id, status } = req.body;
 
