@@ -3,12 +3,18 @@ import cors from "cors";
 import helmet from "helmet";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-
+import rateLimit from "express-rate-limit";
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP"
+});
 
+app.use(limiter);
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
@@ -38,7 +44,18 @@ const listingSchema = new mongoose.Schema(
 );
 
 const Listing = mongoose.model("Listing", listingSchema);
+const adminAuth = (req, res, next) => {
+  const adminKey = req.headers["x-admin-key"];
 
+  if (adminKey !== process.env.ADMIN_KEY) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized"
+    });
+  }
+
+  next();
+};
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
@@ -83,7 +100,7 @@ app.get("/api/listings", async (req, res) => {
   }
 });
 
-app.post("/api/listings/status", async (req, res) => {
+app.post("/api/listings/status", adminAuth, async (req, res) => {
   try {
     const { id, status } = req.body;
 
@@ -118,7 +135,9 @@ app.post("/api/listings/status", async (req, res) => {
     });
   }
 });
-
+app.get("/", (req, res) => {
+  res.send("Exalt Exchange Backend Running ✅");
+});
 app.listen(PORT, () => {
   console.log(`Exalt Exchange backend running on port ${PORT}`);
 });
