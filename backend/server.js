@@ -96,9 +96,12 @@ app.get("/api/listings", async (req, res) => {
 
     res.status(500).json({
       success: false,
+      error: error.message,
     });
   }
 });
+
+
 
 app.post("/api/listings/status", adminAuth, async (req, res) => {
   try {
