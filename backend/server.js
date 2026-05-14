@@ -165,7 +165,7 @@ app.post("/api/deposit-request", async (req, res) => {
   }
 });
 
-app.get("/api/deposit-request", async (req, res) => {
+app.get("/api/deposit-request", (req, res) => {
   try {
     res.json({
       success: true,
