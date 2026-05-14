@@ -170,7 +170,36 @@ app.get("/api/support-ticket", (req, res) => {
     tickets: supportTickets,
   });
 });
+app.post("/api/deposit-request", async (req, res) => {
+  try {
+    const request = {
+      id: String(Date.now()),
+      ...req.body,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
 
+    depositRequests.unshift(request);
+
+    res.json({
+      success: true,
+      message: "Deposit request submitted",
+      request,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
+
+app.get("/api/deposit-request", (req, res) => {
+  res.json({
+    success: true,
+    requests: depositRequests,
+  });
+});
 app.post("/api/deposit-request/status", (req, res) => {
   const { id, status } = req.body;
 
