@@ -110,7 +110,59 @@ app.get("/api/market/coins", async (req, res) => {
     });
   }
 });
-let depositRequests = [];
+let users = [];
+
+app.post("/api/signup", (req, res) => {
+  try {
+
+    const { name, wallet, email, password } = req.body;
+
+    if (!name || !wallet || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields required",
+      });
+    }
+
+    const existingUser = users.find(
+      (user) => user.email === email
+    );
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
+    }
+
+    const user = {
+      id: Date.now(),
+      name,
+      wallet,
+      email,
+      password,
+    };
+
+    users.push(user);
+
+    res.json({
+      success: true,
+      message: "Signup successful",
+      user,
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+
+  }
+}); depositRequests = [];
+
 
 app.post("/api/deposit-request", async (req, res) => {
   try {

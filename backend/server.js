@@ -138,6 +138,82 @@ app.get("/api/listings", async (req, res) => {
     });
   }
 });let depositRequests = [];
+let users = [];
+
+app.post("/api/signup", (req, res) => {
+  try {
+    const { name, wallet, email, password } = req.body;
+
+    if (!name || !wallet || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields required",
+      });
+    }
+
+    const existingUser = users.find((user) => user.email === email);
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
+    }
+
+    const user = {
+      id: String(Date.now()),
+      name,
+      wallet,
+      email,
+      password,
+      balance: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    users.push(user);
+
+    res.json({
+      success: true,
+      message: "Signup successful",
+      token: "exalt-user-token",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+});
+
+app.post("/api/login", (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = users.find(
+      (u) => u.email === email && u.password === password
+    );
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      token: "exalt-user-token",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+});
 
 app.post("/api/deposit-request", async (req, res) => {
   try {
