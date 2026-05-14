@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-
+app.use(express.urlencoded({ extended: true }));
 const EXALT_CONTRACT = "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78";
 
 let listings = [
@@ -112,18 +112,32 @@ app.get("/api/market/coins", async (req, res) => {
 });
 let depositRequests = [];
 
-app.post("/api/deposit-request", (req, res) => {
-  const request = {
-    id: String(Date.now()),
-    ...req.body,
-  };
+app.post("/api/deposit-request", async (req, res) => {
+  try {
+    console.log("Deposit Request:", req.body);
 
-  depositRequests.push(request);
+    const request = {
+      id: Date.now().toString(),
+      ...req.body,
+      createdAt: new Date().toISOString(),
+    };
 
-  res.json({
-    success: true,
-    request,
-  });
+    depositRequests.push(request);
+
+    res.json({
+      success: true,
+      message: "Deposit request submitted",
+      request,
+    });
+
+  } catch (error) {
+    console.log("Deposit error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
 });
 
 app.get("/api/deposit-request", (req, res) => {
