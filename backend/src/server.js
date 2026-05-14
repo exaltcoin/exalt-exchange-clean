@@ -193,13 +193,13 @@ app.post("/api/deposit-request", async (req, res) => {
     });
   }
 });
-
 app.get("/api/deposit-request", (req, res) => {
   res.json({
     success: true,
     requests: depositRequests,
   });
 });
+
 app.post("/api/deposit-request/status", (req, res) => {
   const { id, status } = req.body;
 
