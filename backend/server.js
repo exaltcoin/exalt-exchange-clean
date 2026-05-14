@@ -137,7 +137,79 @@ app.get("/api/listings", async (req, res) => {
       message: "Server Error",
     });
   }
+});let depositRequests = [];
+
+app.post("/api/deposit-request", async (req, res) => {
+  try {
+    const request = {
+      id: String(Date.now()),
+      ...req.body,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    depositRequests.unshift(request);
+
+    res.json({
+      success: true,
+      message: "Deposit request submitted",
+      request,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
 });
+
+app.get("/api/deposit-request", async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      requests: depositRequests,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
+
+app.post("/api/deposit-request/status", async (req, res) => {
+  try {
+    const { id, status } = req.body;
+
+    const request = depositRequests.find(
+      (item) => item.id === id
+    );
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Deposit request not found",
+      });
+    }
+
+    request.status = status;
+
+    res.json({
+      success: true,
+      request,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("Exalt Exchange Backend Running ✅");
 });
