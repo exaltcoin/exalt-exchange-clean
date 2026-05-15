@@ -48,6 +48,18 @@ const protect = (req, res, next) => {
     });
   }
 };
+const adminProtect = (req, res, next) => {
+  const adminKey = req.headers["x-admin-key"];
+
+  if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+    return res.status(401).json({
+      success: false,
+      message: "Admin access denied",
+    });
+  }
+
+  next();
+};
 const EXALT_CONTRACT = "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78";
 
 let listings = [
@@ -234,7 +246,7 @@ app.post("/api/deposit-request", async (req, res) => {
   }
 });
 
-app.get("/api/deposit-request", (req, res) => {
+app.get("/api/deposit-request", adminProtect, (req, res) => {
   res.json({
     success: true,
     requests: depositRequests,
