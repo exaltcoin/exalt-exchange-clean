@@ -4,6 +4,9 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
+import dns from "dns";
+dns.setDefaultResultOrder("ipv4first");
 
 dotenv.config();
 mongoose.connect(process.env.MONGO_URI)
@@ -16,6 +19,35 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const protect = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Token missing",
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+
+    req.user = decoded;
+
+    next();
+
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid token",
+    });
+  }
+};
 const EXALT_CONTRACT = "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78";
 
 let listings = [
@@ -75,6 +107,12 @@ async function getRealMarketData(coin) {
     };
   }
 }
+app.get("/api/auth/me", protect, async (req, res) => {
+  res.json({
+    success: true,
+    user: req.user,
+  });
+});
 app.get("/api/market/coins", async (req, res) => {
   try {
     const approved = listings.filter((coin) => coin.status === "approved");
@@ -164,7 +202,8 @@ app.post("/api/signup", (req, res) => {
     });
 
   }
-}); depositRequests = [];
+});
+ let depositRequests = [];
 
 
 app.post("/api/deposit-request", async (req, res) => {
