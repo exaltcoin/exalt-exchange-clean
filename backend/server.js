@@ -139,6 +139,14 @@ app.get("/api/listings", async (req, res) => {
   }
 });let depositRequests = [];
 let users = [];
+let supportTickets = [];
+
+app.get("/api/support-ticket", (req, res) => {
+  res.json({
+    success: true,
+    tickets: supportTickets || [],
+  });
+});
 
 app.post("/api/signup", (req, res) => {
   try {
