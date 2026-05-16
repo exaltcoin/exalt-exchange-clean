@@ -4,299 +4,273 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: "Too many requests from this IP"
-});
 
-app.use(limiter);
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: "Too many requests from this IP"
+}));
+
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://papaya-lily-30fd07.netlify.app",
+    "https://polite-squirrel-443466.netlify.app",
+    "https://www.exaltcoincommunity.com",
+    "https://exaltcoincommunity.com",
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "x-admin-key"]
+}));
+
 app.use(express.json());
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB Connected");
-  })
-  .catch((error) => {
-    console.log(error);
-  });
+await mongoose.connect(process.env.MONGO_URI);
+console.log("MongoDB Connected");
 
-const listingSchema = new mongoose.Schema(
-  {
-    name: String,
-    contract: String,
-    website: String,
-    status: {
-      type: String,
-      default: "pending",
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-const Listing = mongoose.model("Listing", listingSchema);
 const adminAuth = (req, res, next) => {
   const adminKey = req.headers["x-admin-key"];
-
   if (adminKey !== process.env.ADMIN_KEY) {
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized"
-    });
+    return res.status(401).json({ success: false, message: "Unauthorized" });
   }
-
   next();
 };
-app.get("/api/health", (req, res) => {
-  res.json({
-    ok: true,
-    name: "Exalt Exchange API",
-  });
+
+const listingSchema = new mongoose.Schema({
+  name: String,
+  symbol: String,
+  chain: String,
+  contract: String,
+  website: String,
+  telegram: String,
+  twitter: String,
+  discord: String,
+  chart: String,
+  buy: String,
+  status: { type: String, default: "pending" }
+}, { timestamps: true });
+
+const depositSchema = new mongoose.Schema({
+  name: String,
+  wallet: String,
+  amount: String,
+  paymentMethod: String,
+  transactionId: String,
+  status: { type: String, default: "pending" }
+}, { timestamps: true });
+
+const ticketSchema = new mongoose.Schema({
+  wallet: String,
+  issue: String,
+  message: String,
+  status: { type: String, default: "open" }
+}, { timestamps: true });
+
+const userSchema = new mongoose.Schema({
+  name: String,
+  wallet: String,
+  email: String,
+  password: String,
+  balance: { type: Number, default: 0 }
+}, { timestamps: true });
+
+const Listing = mongoose.model("Listing", listingSchema);
+const Deposit = mongoose.model("Deposit", depositSchema);
+const Ticket = mongoose.model("Ticket", ticketSchema);
+const User = mongoose.model("User", userSchema);
+
+app.get("/", (req, res) => {
+  res.send("Exalt Exchange Backend Running ✅");
 });
 
+app.get("/api/health", (req, res) => {
+  res.json({ success: true, message: "Exalt Exchange API running" });
+});
+
+// LISTINGS
 app.post("/api/listings", async (req, res) => {
   try {
     const listing = await Listing.create({
-      name: req.body.name,
-      contract: req.body.contract,
-      website: req.body.website,
+      ...req.body,
+      status: "pending"
     });
 
-    res.json({
-      success: true,
-      listing,
-    });
+    res.json({ success: true, message: "Listing submitted", listing });
   } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-    });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
 
 app.get("/api/listings", async (req, res) => {
   try {
-    const listings = await Listing.find().sort({
-      createdAt: -1,
-    });
-
+    const listings = await Listing.find().sort({ createdAt: -1 });
     res.json(listings);
   } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
 
-
-
-   app.post("/api/listings/status", async (req, res) => {
+app.post("/api/listings/status", adminAuth, async (req, res) => {
   try {
     const { id, status } = req.body;
 
     const listing = await Listing.findByIdAndUpdate(
       id,
-      {
-        status,
-      },
-      {
-        new: true,
-      }
+      { status },
+      { new: true }
     );
 
     if (!listing) {
-      return res.status(404).json({
-        success: false,
-        message: "Listing not found",
-      });
+      return res.status(404).json({ success: false, message: "Listing not found" });
     }
 
-    res.json({
-      success: true,
-      message: "Status updated",
-      listing,
-    });
+    res.json({ success: true, message: "Listing status updated", listing });
   } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
-});let depositRequests = [];
-let users = [];
-let supportTickets = [];
-
-app.get("/api/support-ticket", (req, res) => {
-  res.json({
-    success: true,
-    tickets: supportTickets || [],
-  });
 });
 
-app.post("/api/signup", (req, res) => {
+// DEPOSITS
+app.post("/api/deposit-request", async (req, res) => {
+  try {
+    const request = await Deposit.create({
+      ...req.body,
+      status: "pending"
+    });
+
+    res.json({ success: true, message: "Deposit request submitted", request });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+app.get("/api/deposit-request", async (req, res) => {
+  try {
+    const requests = await Deposit.find().sort({ createdAt: -1 });
+    res.json({ success: true, requests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+app.post("/api/deposit-request/status", adminAuth, async (req, res) => {
+  try {
+    const { id, status } = req.body;
+
+    const request = await Deposit.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!request) {
+      return res.status(404).json({ success: false, message: "Deposit request not found" });
+    }
+
+    res.json({ success: true, message: "Deposit status updated", request });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+// SUPPORT TICKETS
+app.post("/api/support-ticket", async (req, res) => {
+  try {
+    const ticket = await Ticket.create({
+      ...req.body,
+      status: "open"
+    });
+
+    res.json({ success: true, message: "Support ticket submitted", ticket });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+app.get("/api/support-ticket", async (req, res) => {
+  try {
+    const tickets = await Ticket.find().sort({ createdAt: -1 });
+    res.json({ success: true, tickets });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+app.post("/api/support-ticket/status", adminAuth, async (req, res) => {
+  try {
+    const { id, status } = req.body;
+
+    const ticket = await Ticket.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    res.json({ success: true, message: "Ticket status updated", ticket });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+// USERS BASIC
+app.post("/api/signup", async (req, res) => {
   try {
     const { name, wallet, email, password } = req.body;
 
     if (!name || !wallet || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields required",
-      });
+      return res.status(400).json({ success: false, message: "All fields required" });
     }
 
-    const existingUser = users.find((user) => user.email === email);
+    const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "User already exists",
-      });
+      return res.status(400).json({ success: false, message: "User already exists" });
     }
 
-    const user = {
-      id: String(Date.now()),
-      name,
-      wallet,
-      email,
-      password,
-      balance: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    users.push(user);
+    const user = await User.create({ name, wallet, email, password });
 
     res.json({
       success: true,
       message: "Signup successful",
       token: "exalt-user-token",
-      user,
+      user
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
 
-app.post("/api/login", (req, res) => {
+app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = users.find(
-      (u) => u.email === email && u.password === password
-    );
+    const user = await User.findOne({ email, password });
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
+      return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
 
     res.json({
       success: true,
       message: "Login successful",
       token: "exalt-user-token",
-      user,
+      user
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
 
-app.post("/api/deposit-request", async (req, res) => {
-  try {
-    const request = {
-      id: String(Date.now()),
-      ...req.body,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-
-    depositRequests.unshift(request);
-
-    res.json({
-      success: true,
-      message: "Deposit request submitted",
-      request,
-    });
-  } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
-});
-
-app.get("/api/deposit-request", (req, res) => {
-  try {
-    res.json({
-      success: true,
-      requests: depositRequests,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
-});
-
-app.post("/api/deposit-request/status", async (req, res) => {
-  try {
-    const { id, status } = req.body;
-
-    const request = depositRequests.find(
-      (item) => item.id === id
-    );
-
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: "Deposit request not found",
-      });
-    }
-
-    request.status = status;
-
-    res.json({
-      success: true,
-      request,
-    });
-  } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
-});
-
-app.get("/", (req, res) => {
-  res.send("Exalt Exchange Backend Running ✅");
-});
 app.listen(PORT, () => {
   console.log(`Exalt Exchange backend running on port ${PORT}`);
 });
