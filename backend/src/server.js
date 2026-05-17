@@ -16,7 +16,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://polite-squirrel-443466.netlify.app",
+    "https://jade-souffle-6c10b8.netlify.app",
+    "https://www.exaltcoincommunity.com",
+    "https://exaltcoincommunity.com"
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const protect = (req, res, next) => {
