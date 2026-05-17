@@ -19,15 +19,19 @@ app.use(rateLimit({
 app.use(helmet());
 app.use(cors({
   origin: [
+    "https://jade-souffle-6c10b8.netlify.app",
     "https://papaya-lily-30fd07.netlify.app",
     "https://polite-squirrel-443466.netlify.app",
     "https://www.exaltcoincommunity.com",
     "https://exaltcoincommunity.com",
     process.env.FRONTEND_URL
   ].filter(Boolean),
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "x-admin-key"]
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "x-admin-key", "Authorization"],
+  credentials: true
 }));
+
+app.options("*", cors());
 
 app.use(express.json());
 
