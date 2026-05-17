@@ -36,9 +36,16 @@ console.log("MongoDB Connected");
 
 const adminAuth = (req, res, next) => {
   const adminKey = req.headers["x-admin-key"];
-  if (adminKey !== process.env.ADMIN_KEY) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+
+console.log("HEADER ADMIN KEY:", adminKey);
+
+ if (String(adminKey).trim() !== String(process.env.ADMIN_KEY).trim()) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
   }
+
   next();
 };
 

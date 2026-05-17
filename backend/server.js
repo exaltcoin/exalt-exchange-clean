@@ -28,8 +28,8 @@ await mongoose.connect(process.env.MONGO_URI);
 console.log("MongoDB Connected");
 
 const adminAuth = (req, res, next) => {
-  const adminKey = String(req.headers["x-admin-key"] || "exaltexchange7890$$").trim();
-  const realKey = String(process.env.ADMIN_KEY || "exaltexchange7890$$").trim();
+  const adminKey = String(req.headers["x-admin-key"] || exalt9068).trim();
+  const realKey = String(process.env.ADMIN_KEY || exalt9068).trim();
 
   if (!realKey || adminKey !== realKey) {
     return res.status(401).json({
