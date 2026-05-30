@@ -4,10 +4,12 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
-
+const authRoutes = require("./authRoutes");
 dotenv.config();
 
 const app = express();
+const futuresRoutes =
+require("./routes/futuresRoutes");
 const PORT = process.env.PORT || 3000;
 
 app.use(rateLimit({
@@ -34,6 +36,11 @@ app.use(cors({
 app.options("*", cors());
 
 app.use(express.json());
+app.use("/api", authRoutes);
+app.use(
+    "/api/futures",
+    futuresRoutes
+);
 
 await mongoose.connect(process.env.MONGO_URI);
 console.log("MongoDB Connected");
@@ -95,7 +102,42 @@ const Listing = mongoose.model("Listing", listingSchema);
 const Deposit = mongoose.model("Deposit", depositSchema);
 const Ticket = mongoose.model("Ticket", ticketSchema);
 const User = mongoose.model("User", userSchema);
+const P2POrder = mongoose.model(
+  "P2POrder",
+  new mongoose.Schema(
+    {
+      sellerId: String,
+      buyerId: String,
 
+      asset: {
+        type: String,
+        default: "EXALT",
+      },
+
+      fiat: {
+        type: String,
+        default: "KWD",
+      },
+
+      type: String,
+
+      price: Number,
+      amount: Number,
+      remaining: Number,
+
+      paymentMethod: String,
+      walletAddress: String,
+
+      paymentProof: String,
+
+      status: {
+        type: String,
+        default: "open",
+      },
+    },
+    { timestamps: true }
+  )
+);
 app.get("/", (req, res) => {
   res.send("Exalt Exchange Backend Running ✅");
 });
@@ -103,7 +145,101 @@ app.get("/", (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "Exalt Exchange API running" });
 });
+// P2P CREATE ORDER
+app.post("/api/p2p/create", async (req, res) => {
+  try {
+    const {
+      sellerId,
+      asset,
+      fiat,
+      type,
+      price,
+      amount,
+      paymentMethod,
+      walletAddress,
+    } = req.body;
 
+    const order = await P2POrder.create({
+      sellerId,
+      asset: asset || "EXALT",
+      fiat: fiat || "KWD",
+      type,
+      price: Number(price),
+      amount: Number(amount),
+      remaining: Number(amount),
+      paymentMethod,
+      walletAddress,
+      status: "open",
+    });
+
+    res.json({
+      success: true,
+      message: "P2P order created",
+      order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+// P2P GET ORDERS
+app.get("/api/p2p/orders", async (req, res) => {
+  try {
+    const orders = await P2POrder.find().sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+// P2P BUY / ACCEPT ORDER
+app.post("/api/p2p/buy", async (req, res) => {
+  try {
+    const { orderId, buyerId } = req.body;
+
+    const order = await P2POrder.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "P2P order not found",
+      });
+    }
+
+    if (order.status !== "open") {
+      return res.status(400).json({
+        success: false,
+        message: "Order is not open",
+      });
+    }
+
+    order.buyerId = buyerId;
+    order.status = "processing";
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: "P2P trade started",
+      order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 // LISTINGS
 app.post("/api/listings", async (req, res) => {
   try {

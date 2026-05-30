@@ -1,20 +1,35 @@
 {
   "name": "exalt-exchange-backend-phase1",
   "version": "1.0.0",
-  "type": "module",
-  "main": "src/server.js",
+  "description": "Exalt Exchange Production Backend",
+  "main": "server.js",
+  "type": "commonjs",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node src/server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
+  "keywords": [
+    "crypto",
+    "exchange",
+    "exalt",
+    "mongodb",
+    "express"
+  ],
+  "author": "Exalt Exchange",
+  "license": "MIT",
   "dependencies": {
+    "axios": "^1.16.1",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "express-rate-limit": "^8.5.2",
+    "express-rate-limit": "^8.0.1",
     "helmet": "^8.0.0",
-    "mongodb": "^5.9.2",
-    "mongoose": "^7.8.9",
-    "node-fetch": "^3.3.2"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.9.5",
+    "nodemailer": "^8.0.10"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
   }
 }
