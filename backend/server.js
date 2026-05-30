@@ -4,7 +4,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 const connectDB = require("./config/db");
-const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware.js");
 const listingRoutes = require("./routes/listingRoutes");
 const authRoutes = require("./authRoutes");
 const depositRoutes = require("./routes/depositRoutes");
