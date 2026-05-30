@@ -140,7 +140,6 @@ router.post("/forgot-password", async (req, res) => {
       });
     }
 
-    // Generate Reset Token
     const resetToken = crypto.randomBytes(32).toString("hex");
 
     user.resetPasswordToken = resetToken;
@@ -148,42 +147,13 @@ router.post("/forgot-password", async (req, res) => {
 
     await user.save();
 
-    // Reset Link
-    const resetUrl =
-      "https://radiant-mooncake-68b7d8.netlify.app/reset-password/" +
-      resetToken;
-
-    // Mail Transport
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    // Send Mail
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Exalt Exchange Password Reset",
-      html: `
-        <h2>Password Reset</h2>
-        <p>Click button below to reset password</p>
-        <a href="${resetUrl}">
-          <button style="padding:10px 20px;background:#ff9800;color:white;border:none;border-radius:5px;">
-            Reset Password
-          </button>
-        </a>
-      `,
-    });
-
-    res.json({
+    return res.json({
       success: true,
-      message: "Password reset email sent",
+      message: "Reset code generated",
+      resetToken: resetToken,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
