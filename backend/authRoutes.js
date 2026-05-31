@@ -3,7 +3,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("./models/user");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 const { protect, adminOnly } = require("./middleware/authMiddleware");
 
 const router = express.Router();
@@ -131,6 +132,13 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
 
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -147,19 +155,36 @@ router.post("/forgot-password", async (req, res) => {
 
     await user.save();
 
+    const frontendUrl =
+      process.env.FRONTEND_URL || "http://localhost:5173";
+
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    await resend.emails.send({
+      from: `Exalt Exchange <${process.env.EMAIL_FROM}>`,
+      to: email,
+      subject: "Exalt Exchange Password Reset",
+      html: `
+        <h2>Exalt Exchange Password Reset</h2>
+        <p>Click the link below to reset your password:</p>
+        <a href="${resetUrl}">${resetUrl}</a>
+        <p>This link will expire in 15 minutes.</p>
+      `,
+    });
+
     return res.json({
       success: true,
-      message: "Reset code generated",
-      resetToken: resetToken,
+      message: "Password reset email sent",
     });
   } catch (error) {
+    console.log("Forgot password error:", error);
+
     return res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 });
-
 router.post("/reset-password/:token", async (req, res) => {
   try {
     const user = await User.findOne({
