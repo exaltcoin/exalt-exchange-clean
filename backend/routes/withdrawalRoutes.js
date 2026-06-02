@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const Withdrawal = require("../models/Withdrawal");
-const User = require("../models/User");
+const User = require("../models/user");
 const Transaction = require("../models/Transaction");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 
