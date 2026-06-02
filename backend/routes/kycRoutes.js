@@ -50,5 +50,17 @@ router.post("/", async (req, res) => {
     });
   }
 });
-
+router.get("/", async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      kycList: [],
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 module.exports = router;
