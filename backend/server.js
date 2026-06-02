@@ -34,6 +34,7 @@ const io = new Server(server, {
   cors: {
     origin: [
       "http://localhost:5173",
+      "https://exalt-exchange-frontend.onrender.com",
       "https://exalt-exchange-backend.onrender.com",
       "https://exaltcoincommunity.com",
       "https://www.exaltcoincommunity.com",
@@ -54,6 +55,7 @@ io.on("connection", (socket) => {
 app.use(cors({
   origin: [
     "http://localhost:5173",
+    "https://exalt-exchange-frontend.onrender.com",
     "https://exalt-exchange-backend.onrender.com",
     "https://exaltcoincommunity.com",
     "https://www.exaltcoincommunity.com"
