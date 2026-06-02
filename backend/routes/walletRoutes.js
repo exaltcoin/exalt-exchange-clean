@@ -7,10 +7,15 @@ const {
   withdrawFunds,
 } = require("../controllers/walletController");
 
-router.get("/:userId", getWallet);
+const { protect } = require("../middleware/authMiddleware");
 
-router.post("/deposit", depositFunds);
+// logged-in user wallet only
+router.get("/me", protect, getWallet);
 
-router.post("/withdraw", withdrawFunds);
+// logged-in user deposit only
+router.post("/deposit", protect, depositFunds);
+
+// logged-in user withdraw only
+router.post("/withdraw", protect, withdrawFunds);
 
 module.exports = router;

@@ -22,6 +22,7 @@ const tradeRoutes = require("./routes/tradeRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const dexRoutes = require("./routes/dexRoutes");
 const marketRoutes = require("./routes/marketRoutes");
+const kycRoutes = require("./routes/kycRoutes");
 const {
   startBinanceStream,
 } = require("./services/binanceService"); 
@@ -89,117 +90,7 @@ app.use("/api/trades", tradeRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/deposit-request", depositRoutes);
 app.use("/api/support-ticket", supportRoutes);
-app.put("/api/admin/deposits/:id/approve", async (req, res) => {
-  try {
-
-    const Deposit = require("./models/Deposit");
-    const User = require("./models/User");
-    const Transaction = require("./models/Transaction");
-
-    const deposit = await Deposit.findById(req.params.id);
-
-    if (!deposit) {
-      return res.status(404).json({
-        success: false,
-        message: "Deposit not found"
-      });
-    }
-
-    // prevent duplicate approval
-    if (deposit.status === "approved") {
-      return res.status(400).json({
-        success: false,
-        message: "Deposit already approved"
-      });
-    }
-
-    // approve deposit
-    deposit.status = "approved";
-    await deposit.save();
-
-    // update user balance
-    const user = await User.findById(deposit.userId);
-
-    if (user) {
-      user.balance += Number(deposit.amount);
-      await user.save();
-    }
-await Transaction.create({
-  userId: deposit.userId || null,
-  type: "deposit",
-  amount: Number(deposit.amount),
-  status: "approved",
-  note: "Deposit approved by admin",
-  txHash: deposit.transactionId || deposit.txHash || ""
-});
-    res.json({
-      success: true,
-      message: "Deposit approved successfully"
-    });
-  } catch (error) {
-
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server Error"
-    });
-
-  }
-});
-app.get("/", (req, res) => {
-  res.json({
-    success: true,
-    message: "Exalt Exchange Backend is running",
-    status: "LIVE",
-  });
-});
-
-app.get("/api/transactions", async (req, res) => {
-  try {
-    const Transaction = require("./models/Transaction");
-
-    const transactions = await Transaction.find()
-      .sort({ createdAt: -1 });
-
-    res.json({
-      success: true,
-      transactions,
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
-app.get("/api/user/balance/:userId", async (req, res) => {
-  try {
-    const User = require("./models/User");
-
-    const user = await User.findById(req.params.userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    res.json({
-      success: true,
-      balance: user.balance || 0,
-      user,
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+app.use("/api/kyc", kycRoutes);
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,

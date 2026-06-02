@@ -1,17 +1,50 @@
 const mongoose = require("mongoose");
 
-const walletSchema = new mongoose.Schema(
+const balanceSchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true },
-    balances: [
-      {
-        coin: { type: String, required: true, uppercase: true },
-        available: { type: Number, default: 0 },
-        locked: { type: Number, default: 0 },
-      },
-    ],
+    coin: {
+      type: String,
+      required: true,
+      uppercase: true,
+      trim: true,
+      enum: ["USDT", "BTC", "ETH", "BNB", "EXALT"],
+    },
+
+    available: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    locked: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
-  { timestamps: true }
+  { _id: false }
 );
 
-module.exports = mongoose.model("Wallet", walletSchema);
+const walletSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+      index: true,
+    },
+
+    balances: {
+      type: [balanceSchema],
+      default: [],
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports =
+  mongoose.models.Wallet ||
+  mongoose.model("Wallet", walletSchema);

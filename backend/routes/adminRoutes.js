@@ -6,8 +6,12 @@ const {
   approveWithdrawal,
 } = require("../controllers/adminController");
 
-router.post("/approve-deposit", approveDeposit);
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
-router.post("/approve-withdrawal", approveWithdrawal);
+// ADMIN ONLY: approve deposit
+router.post("/approve-deposit", protect, adminOnly, approveDeposit);
+
+// ADMIN ONLY: approve withdrawal
+router.post("/approve-withdrawal", protect, adminOnly, approveWithdrawal);
 
 module.exports = router;

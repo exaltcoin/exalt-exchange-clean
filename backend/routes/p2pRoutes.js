@@ -4,6 +4,21 @@ const router = express.Router();
 const P2POrder = require("../models/P2POrder");
 const User = require("../models/user");
 const Transaction = require("../models/Transaction");
+const cloudinary = require("../services/cloudinaryService");
+const {
+  lockBalance,
+  releaseBalance,
+  addBalance,
+} = require("../services/walletService");
+const multer = require("multer");
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+});
 // Create P2P ad
 router.post("/create", async (req, res) => {
   try {
@@ -34,17 +49,9 @@ router.post("/create", async (req, res) => {
       });
     }
 
-    if (type === "sell") {
-      if ((seller.wallets?.EXALT || 0) < Number(amount)) {
-        return res.status(400).json({
-          success: false,
-          message: "Insufficient EXALT balance",
-        });
-      }
-
-      seller.wallets.EXALT -= Number(amount);
-      await seller.save();
-    }
+   if (type === "sell") {
+  await lockBalance(sellerId, asset || "EXALT", Number(amount));
+}
     const order = await P2POrder.create({
       sellerId,
       asset: asset || "EXALT",
@@ -140,10 +147,31 @@ await Transaction.create({
 });
 
 // Buyer marks paid
-router.post("/:id/paid", async (req, res) => {
+router.post(
+  "/:id/paid",
+  upload.single("proof"),
+  async (req, res) => {
   try {
-    const { paymentProof } = req.body;
+   let paymentProof = "";
 
+if (req.file) {
+  const uploadResult = await new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        {
+          folder: "exalt-exchange/p2p-proofs",
+          resource_type: "image",
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      )
+      .end(req.file.buffer);
+  });
+
+  paymentProof = uploadResult.secure_url;
+}
     const order = await P2POrder.findById(req.params.id);
 
     if (!order) {
@@ -153,7 +181,7 @@ router.post("/:id/paid", async (req, res) => {
       });
     }
 
-    order.paymentProof = paymentProof || "";
+    order.paymentProof = paymentProof;
     order.status = "paid";
 await Transaction.create({
  userId: order.buyerId,
@@ -196,27 +224,20 @@ router.post("/:id/release", async (req, res) => {
       });
     }
 
-    const buyer = await User.findById(order.buyerId);
-
-    if (!buyer) {
-      return res.status(404).json({
-        success: false,
-        message: "Buyer not found",
-      });
-    }
-
-   if (!buyer.wallets) buyer.wallets = {};
-buyer.wallets.EXALT = Number(buyer.wallets.EXALT || 0) + Number(order.amount);
-    await buyer.save();
-
-    order.status = "released";
-    order.remaining = 0;
-    if (!order.buyerId) {
+   if (!order.buyerId) {
   return res.status(400).json({
     success: false,
     message: "Buyer ID missing",
   });
 }
+
+await addBalance(
+  order.buyerId,
+  order.asset || "EXALT",
+  Number(order.amount)
+);
+    order.status = "released";
+    order.remaining = 0;
 await Transaction.create({
   userId: order.buyerId,
   type: "P2P_ORDER_RELEASED",
@@ -256,27 +277,9 @@ router.post("/:id/cancel", async (req, res) => {
         message: "Only open orders can be cancelled",
       });
     }
-
-    const seller = await User.findById(order.sellerId);
-
-    if (!seller) {
-      return res.status(404).json({
-        success: false,
-        message: "Seller not found",
-      });
-    }
-
-    if (!seller.wallets) seller.wallets = {};
-
-    seller.wallets.EXALT =
-      Number(seller.wallets.EXALT || 0) + Number(order.amount);
-
-    await seller.save();
-
-    order.status = "cancelled";
-
-    await order.save();
-
+   await releaseBalance(order.sellerId, order.asset || "EXALT", Number(order.amount));
+   order.status = "cancelled";
+await order.save();
     res.json({
       success: true,
       message: "Order cancelled and escrow refunded",

@@ -49,8 +49,50 @@ async function subtractBalance(userId, coin, amount) {
   return wallet;
 }
 
+async function lockBalance(userId, coin, amount) {
+  const wallet = await getOrCreateWallet(userId);
+
+  const symbol = coin.toUpperCase();
+
+  const balance = wallet.balances.find(
+    (b) => b.coin === symbol
+  );
+
+  if (!balance || balance.available < amount) {
+    throw new Error(`Insufficient ${symbol} balance`);
+  }
+
+  balance.available -= amount;
+  balance.locked += amount;
+
+  await wallet.save();
+
+  return wallet;
+}
+
+async function releaseBalance(userId, coin, amount) {
+  const wallet = await getOrCreateWallet(userId);
+
+  const symbol = coin.toUpperCase();
+
+  const balance = wallet.balances.find(
+    (b) => b.coin === symbol
+  );
+
+  if (!balance || balance.locked < amount) {
+    throw new Error(`Insufficient locked ${symbol}`);
+  }
+
+  balance.locked -= amount;
+
+  await wallet.save();
+
+  return wallet;
+}
 module.exports = {
   getOrCreateWallet,
   addBalance,
   subtractBalance,
+  lockBalance,
+  releaseBalance,
 };
