@@ -3,7 +3,7 @@ const router = express.Router();
 
 const Deposit = require("../models/Deposit");
 const Transaction = require("../models/Transaction");
-const User = require("../models/User");
+const User = require("../models/user");
 const UserWallet = require("../models/UserWallet");
 const WalletLedger = require("../models/WalletLedger");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
