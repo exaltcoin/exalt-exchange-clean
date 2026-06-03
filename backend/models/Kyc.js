@@ -1,87 +1,68 @@
-const mongoose = require("mongoose");
+const express = require("express");
+const router = express.Router();
+const Kyc = require("../models/Kyc");
 
-const kycSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
+router.post("/", async (req, res) => {
+  try {
+    const {
+      userId,
+      fullName,
+      email,
+      country,
+      walletAddress,
+      idType,
+      idNumber,
+      telegramUsername,
+      projectName,
+    } = req.body;
 
-    email: {
-      type: String,
-      required: true,
-      lowercase: true,
-      trim: true,
-    },
+    if (!fullName || !email || !country || !walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: "All required fields missing",
+      });
+    }
 
-    fullName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    const newKyc = await Kyc.create({
+      userId,
+      fullName,
+      email,
+      country,
+      walletAddress,
+      idType,
+      idNumber,
+      telegramUsername,
+      projectName,
+      status: "pending",
+    });
 
-    country: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    return res.status(201).json({
+      success: true,
+      message: "KYC submitted successfully",
+      request: newKyc,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 
-    idType: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+router.get("/", async (req, res) => {
+  try {
+    const kycList = await Kyc.find().sort({ createdAt: -1 });
 
-    idNumber: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    return res.json({
+      success: true,
+      kycList,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 
-    walletAddress: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    telegramUsername: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    projectName: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-      index: true,
-    },
-
-    adminNote: {
-      type: String,
-      default: "",
-    },
-
-    reviewedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-
-    reviewedAt: {
-      type: Date,
-      default: null,
-    },
-  },
-  { timestamps: true }
-);
-
-module.exports = mongoose.model("Kyc", kycSchema);
+module.exports = router;
