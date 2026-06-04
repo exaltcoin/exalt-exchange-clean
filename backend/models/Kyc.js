@@ -4,12 +4,10 @@ const kycSchema = new mongoose.Schema(
     userId: String,
     fullName: String,
     email: String,
+    phone: String,
     country: String,
-    walletAddress: String,
     idType: String,
     idNumber: String,
-    telegramUsername: String,
-    projectName: String,
 
     status: {
       type: String,

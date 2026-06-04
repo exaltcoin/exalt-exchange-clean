@@ -7,20 +7,20 @@ router.post("/submit", async (req, res) => {
       userId,
       fullName,
       email,
+      phone,
       country,
-      walletAddress,
       idType,
       idNumber,
-      telegramUsername,
-      projectName,
     } = req.body;
 
-    if (
-      !fullName ||
-      !email ||
-      !country ||
-      !walletAddress
-    ) {
+   if (
+  !fullName ||
+  !email ||
+  !phone ||
+  !country ||
+  !idType ||
+  !idNumber
+){
       return res.status(400).json({
         success: false,
         message: "All required fields missing",
@@ -32,12 +32,10 @@ const newKyc = new Kyc({
   userId,
   fullName,
   email,
+  phone,
   country,
-  walletAddress,
   idType,
   idNumber,
-  telegramUsername,
-  projectName,
   status: "pending",
 });
 await newKyc.save();
