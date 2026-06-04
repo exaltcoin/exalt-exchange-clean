@@ -122,4 +122,19 @@ router.get("/user/:email", async (req, res) => {
     });
   }
 });
+router.get("/admin/all", async (req, res) => {
+  try {
+    const kycList = await Kyc.find().sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      kycList,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 module.exports = router;
