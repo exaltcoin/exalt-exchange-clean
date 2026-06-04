@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Kyc = require("../models/Kyc");
-router.post("/", async (req, res) => {
+router.post("/submit", async (req, res) => {
   try {
     const {
       userId,
