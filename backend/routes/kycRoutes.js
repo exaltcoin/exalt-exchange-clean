@@ -69,5 +69,59 @@ router.get("/", async (req, res) => {
       message: error.message,
     });
   }
+});router.put("/admin/:id/status", async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const kyc = await Kyc.findByIdAndUpdate(
+      req.params.id,
+      {
+        status,
+        reviewedAt: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!kyc) {
+      return res.status(404).json({
+        success: false,
+        message: "KYC not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      kyc,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+router.get("/user/:email", async (req, res) => {
+  try {
+    const kyc = await Kyc.findOne({ email: req.params.email }).sort({ createdAt: -1 });
+
+    if (!kyc) {
+      return res.json({
+        success: true,
+        kyc: null,
+        status: "not_submitted",
+      });
+    }
+
+    res.json({
+      success: true,
+      kyc,
+      status: kyc.status || "pending",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 });
 module.exports = router;
