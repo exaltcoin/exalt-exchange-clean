@@ -23,6 +23,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const dexRoutes = require("./routes/dexRoutes");
 const marketRoutes = require("./routes/marketRoutes");
 const kycRoutes = require("./routes/kycRoutes");
+const otpRoutes = require("./routes/otpRoutes");
 const {
   startBinanceStream,
 } = require("./services/binanceService"); 
@@ -83,6 +84,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/p2p", p2pRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/otp", otpRoutes);
 app.use("/api/dex", dexRoutes);
 app.use("/api/market", marketRoutes);
 app.use("/api/withdrawals", withdrawalRoutes);
