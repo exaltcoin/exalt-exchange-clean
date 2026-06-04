@@ -28,7 +28,15 @@ router.post("/submit", async (req, res) => {
     }
     console.log("KYC BODY:", req.body);
     console.log("USER ID:", userId);
-const newKyc = new Kyc({
+const existingKyc = await Kyc.findOne({ email });
+
+if (existingKyc) {
+  return res.status(400).json({
+    success: false,
+    message: "KYC already submitted. Please wait for admin review.",
+  });
+}
+    const newKyc = new Kyc({
   userId,
   fullName,
   email,
