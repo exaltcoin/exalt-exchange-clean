@@ -29,7 +29,12 @@ router.post("/submit", async (req, res) => {
     console.log("KYC BODY:", req.body);
     console.log("USER ID:", userId);
 const cleanEmail = email.toLowerCase().trim();
-const existingKyc = await Kyc.findOne({ email: cleanEmail });
+const existingKyc = await Kyc.findOne({
+  $or: [
+    { email: cleanEmail },
+    { userId: userId }
+  ]
+});
 if (existingKyc) {
   return res.status(400).json({
     success: false,
