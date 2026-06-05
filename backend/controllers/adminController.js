@@ -2,7 +2,7 @@ const Deposit = require("../models/Deposit");
 const Withdrawal = require("../models/Withdrawal");
 const User = require("../models/user");
 const Transaction = require("../models/Transaction");
-
+const UserWallet = require("../models/UserWallet");
 // ADMIN: approve deposit
 exports.approveDeposit = async (req, res) => {
   try {
@@ -32,10 +32,18 @@ exports.approveDeposit = async (req, res) => {
       });
     }
 
-    await User.findByIdAndUpdate(deposit.userId, {
-      $inc: { balance: Number(deposit.amount) },
-    });
+   const coin = deposit.coin || "USDT";
 
+await UserWallet.findOneAndUpdate(
+  { userId: deposit.userId },
+  {
+    $inc: {
+      [`balances.${coin}`]: Number(deposit.amount),
+      [`totalDeposited.${coin}`]: Number(deposit.amount),
+    },
+  },
+  { upsert: true, new: true }
+);
     await Transaction.findOneAndUpdate(
       { depositId: deposit._id, type: "deposit" },
       {
