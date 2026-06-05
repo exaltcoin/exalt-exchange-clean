@@ -92,14 +92,14 @@ exports.depositFunds = async (req, res) => {
       message: "Deposit request submitted",
       deposit,
     });
-  } catch (err) {
-    console.error("Deposit error:", err);
+  }catch (err) {
+  console.error("DEPOSIT ERROR FULL:", err);
 
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
+  res.status(500).json({
+    success: false,
+    message: err.message,
+  });
+}
 };
 
 // =========================
