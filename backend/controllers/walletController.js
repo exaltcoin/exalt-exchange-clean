@@ -109,39 +109,40 @@ exports.withdrawFunds = async (req, res) => {
   try {
     const { amount, walletAddress, network, coin, accountName, paymentMethod } = req.body;
 
-if (!paymentMethod) {
-  return res.status(400).json({
-    success: false,
-    message: "Payment method required",
-  });
-}
-    if (
-  paymentMethod === "CRYPTO" &&
-  (!walletAddress || walletAddress.length < 10)
-) {
-  return res.status(400).json({
-    success: false,
-    message: "Valid wallet address required",
-  });
-}
-const withdrawAmount = Number(amount);
+    const selectedCoin = (coin || "USDT").toUpperCase();
+    const withdrawAmount = Number(amount);
 
-if (!withdrawAmount || withdrawAmount <= 0) {
-  return res.status(400).json({
-    success: false,
-    message: "Invalid withdrawal amount",
-  });
-}
-   const wallet = await UserWallet.findOneAndUpdate(
-  {
-    userId: req.user._id,
-    [`balances.${coin || "BNB"}`]: { $gte: withdrawAmount },
-  },
-  {
-    $inc: { [`balances.${coin || "BNB"}`]: -withdrawAmount },
-  },
-  { new: true }
-);
+    if (!withdrawAmount || withdrawAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid withdrawal amount",
+      });
+    }
+
+    if (!paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment method required",
+      });
+    }
+
+    if (paymentMethod === "CRYPTO" && (!walletAddress || walletAddress.length < 10)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid wallet address required",
+      });
+    }
+
+    const wallet = await UserWallet.findOneAndUpdate(
+      {
+        userId: req.user._id,
+        [`balances.${selectedCoin}`]: { $gte: withdrawAmount },
+      },
+      {
+        $inc: { [`balances.${selectedCoin}`]: -withdrawAmount },
+      },
+      { new: true }
+    );
 
     if (!wallet) {
       return res.status(400).json({
@@ -151,15 +152,15 @@ if (!withdrawAmount || withdrawAmount <= 0) {
     }
 
     const withdrawal = await Withdrawal.create({
-  userId: req.user._id,
-  amount: withdrawAmount,
-  walletAddress,
-  accountName,
-  paymentMethod,
-  coin,
-  network: network || "BSC",
-  status: "pending",
-});
+      userId: req.user._id,
+      amount: withdrawAmount,
+      walletAddress,
+      accountName: accountName || "",
+      paymentMethod,
+      coin: selectedCoin,
+      network: network || "BSC",
+      status: "pending",
+    });
 
     await Transaction.create({
       userId: req.user._id,
@@ -167,9 +168,9 @@ if (!withdrawAmount || withdrawAmount <= 0) {
       amount: withdrawAmount,
       status: "pending",
       note: "Withdrawal request submitted",
-      txHash: walletAddress,
-      coin: coin || "USDT",
-paymentMethod: paymentMethod || "CRYPTO",
+      txHash: walletAddress || "",
+      coin: selectedCoin,
+      paymentMethod,
       withdrawalId: withdrawal._id,
     });
 
@@ -181,10 +182,9 @@ paymentMethod: paymentMethod || "CRYPTO",
     });
   } catch (err) {
     console.error("Withdraw error:", err);
-
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: err.message,
     });
   }
 };
