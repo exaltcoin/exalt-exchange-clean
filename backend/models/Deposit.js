@@ -25,6 +25,7 @@ const depositSchema = new mongoose.Schema(
 paymentMethod: {
   type: String,
   enum: ["EASYPAISA", "JAZZCASH", "BANK", "CRYPTO"],
+  default:"CRYPTO",
   required: true,
   uppercase: true,
   index: true,
