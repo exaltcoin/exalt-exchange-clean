@@ -107,24 +107,31 @@ exports.depositFunds = async (req, res) => {
 // =========================
 exports.withdrawFunds = async (req, res) => {
   try {
-    const { amount, walletAddress, network, coin } = req.body;
+    const { amount, walletAddress, network, coin, accountName, paymentMethod } = req.body;
 
-    const withdrawAmount = Number(amount);
+if (!paymentMethod) {
+  return res.status(400).json({
+    success: false,
+    message: "Payment method required",
+  });
+}
+    if (
+  paymentMethod === "CRYPTO" &&
+  (!walletAddress || walletAddress.length < 10)
+) {
+  return res.status(400).json({
+    success: false,
+    message: "Valid wallet address required",
+  });
+}
+const withdrawAmount = Number(amount);
 
-    if (!withdrawAmount || withdrawAmount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid withdrawal amount",
-      });
-    }
-
-    if (!walletAddress || walletAddress.length < 10) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid wallet address required",
-      });
-    }
-
+if (!withdrawAmount || withdrawAmount <= 0) {
+  return res.status(400).json({
+    success: false,
+    message: "Invalid withdrawal amount",
+  });
+}
    const wallet = await UserWallet.findOneAndUpdate(
   {
     userId: req.user._id,
@@ -144,12 +151,15 @@ exports.withdrawFunds = async (req, res) => {
     }
 
     const withdrawal = await Withdrawal.create({
-      userId: req.user._id,
-      amount: withdrawAmount,
-      walletAddress,
-      network: network || "BSC",
-      status: "pending",
-    });
+  userId: req.user._id,
+  amount: withdrawAmount,
+  walletAddress,
+  accountName,
+  paymentMethod,
+  coin,
+  network: network || "BSC",
+  status: "pending",
+});
 
     await Transaction.create({
       userId: req.user._id,
@@ -158,6 +168,8 @@ exports.withdrawFunds = async (req, res) => {
       status: "pending",
       note: "Withdrawal request submitted",
       txHash: walletAddress,
+      coin: coin || "USDT",
+paymentMethod: paymentMethod || "CRYPTO",
       withdrawalId: withdrawal._id,
     });
 
@@ -165,7 +177,7 @@ exports.withdrawFunds = async (req, res) => {
       success: true,
       message: "Withdrawal request submitted",
       withdrawal,
-      balance: user.balance,
+      balance: wallet.balances,
     });
   } catch (err) {
     console.error("Withdraw error:", err);
