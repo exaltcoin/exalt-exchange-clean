@@ -107,7 +107,7 @@ exports.depositFunds = async (req, res) => {
 // =========================
 exports.withdrawFunds = async (req, res) => {
   try {
-    const { amount, walletAddress, network } = req.body;
+    const { amount, walletAddress, network, coin } = req.body;
 
     const withdrawAmount = Number(amount);
 
@@ -125,18 +125,18 @@ exports.withdrawFunds = async (req, res) => {
       });
     }
 
-    const user = await User.findOneAndUpdate(
-      {
-        _id: req.user._id,
-        balance: { $gte: withdrawAmount },
-      },
-      {
-        $inc: { balance: -withdrawAmount },
-      },
-      { new: true }
-    );
+   const wallet = await UserWallet.findOneAndUpdate(
+  {
+    userId: req.user._id,
+    [`balances.${coin || "BNB"}`]: { $gte: withdrawAmount },
+  },
+  {
+    $inc: { [`balances.${coin || "BNB"}`]: -withdrawAmount },
+  },
+  { new: true }
+);
 
-    if (!user) {
+    if (!wallet) {
       return res.status(400).json({
         success: false,
         message: "Insufficient balance",
