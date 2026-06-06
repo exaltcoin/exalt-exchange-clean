@@ -16,58 +16,53 @@ const userSchema = new mongoose.Schema(
     },
 
     wallets: {
-      USDT: {
-        type: Number,
-        default:0,
-      },
-      phone: {
-  type: String,
-  default: "",
-},
+      USDT: { type: Number, default: 0 },
+      EXALT: { type: Number, default: 0 },
+      BNB: { type: Number, default: 0 },
+    },
 
-country: {
-  type: String,
-  default: "",
-},
+    phone: {
+      type: String,
+      default: "",
+    },
 
-telegram: {
-  type: String,
-  default: "",
-},
+    country: {
+      type: String,
+      default: "",
+    },
 
-bio: {
-  type: String,
-  default: "",
-},
+    telegram: {
+      type: String,
+      default: "",
+    },
 
-profileImage: {
-  type: String,
-  default: "",
-},
-      EXALT: {
-        type: Number,
-        default:0,
-      },
-      BNB: {
-        type: Number,
-        default: 0,
+    bio: {
+      type: String,
+      default: "",
+    },
+
+    profileImage: {
+      type: String,
+      default: "",
+    },
+
+    balance: {
+      type: Number,
+      default: 0,
+    },
+
+    walletAddress: {
+      type: String,
+      default: "",
+    },
+
+    depositAddresses: {
+      BSC: {
+        type: String,
+        default: "",
       },
     },
-    balance: {
-  type: Number,
-  default: 0,
-},
-walletAddress: {
-  type: String,
-  default: "",
-},
 
-depositAddresses: {
-  BSC: {
-    type: String,
-    default: "",
-  },
-},
     password: {
       type: String,
       required: true,
@@ -78,17 +73,16 @@ depositAddresses: {
       enum: ["user", "admin"],
       default: "user",
     },
-    resetPasswordToken: {
-  type: String,
-},
 
-resetPasswordExpire: {
-  type: Date,
-},
+    resetPasswordToken: {
+      type: String,
+    },
+
+    resetPasswordExpire: {
+      type: Date,
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.models.User || mongoose.model("User", userSchema);
