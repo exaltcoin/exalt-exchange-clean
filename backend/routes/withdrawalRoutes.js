@@ -5,44 +5,60 @@ const Withdrawal = require("../models/Withdrawal");
 const User = require("../models/user");
 const Transaction = require("../models/Transaction");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
+const UserWallet = require("../models/UserWallet");
 
-// USER: submit withdrawal
 router.post("/", protect, async (req, res) => {
   try {
-    const { amount, walletAddress } = req.body;
+    const {
+      amount,
+      walletAddress,
+      method,
+      coin,
+      accountName,
+      accountNumber,
+    } = req.body;
 
     const withdrawAmount = Number(amount);
+    const selectedCoin = (coin || "USDT").toUpperCase();
 
     if (!withdrawAmount || withdrawAmount <= 0 || !walletAddress) {
       return res.status(400).json({
         success: false,
-        message: "Valid amount and wallet address are required",
+        message: "Valid amount and withdrawal address are required",
       });
     }
 
-    // Secure balance deduct only from logged-in user
-    const user = await User.findOneAndUpdate(
-      {
-        _id: req.user._id,
-        balance: { $gte: withdrawAmount },
-      },
-      {
-        $inc: { balance: -withdrawAmount },
-      },
-      { new: true }
-    );
+    const wallet = await UserWallet.findOne({ userId: req.user._id });
 
-    if (!user) {
+    if (!wallet) {
+      return res.status(400).json({
+        success: false,
+        message: "Wallet not found",
+      });
+    }
+
+    if (!wallet.balances) wallet.balances = {};
+
+    const currentBalance = Number(wallet.balances[selectedCoin] || 0);
+
+    if (currentBalance < withdrawAmount) {
       return res.status(400).json({
         success: false,
         message: "Insufficient balance",
       });
     }
 
+    wallet.balances[selectedCoin] = currentBalance - withdrawAmount;
+    await wallet.save();
+
     const withdrawal = await Withdrawal.create({
       userId: req.user._id,
       amount: withdrawAmount,
+      coin: selectedCoin,
+      method: method || "Crypto Wallet",
       walletAddress,
+      accountName,
+      accountNumber,
       status: "pending",
     });
 
@@ -50,6 +66,7 @@ router.post("/", protect, async (req, res) => {
       userId: req.user._id,
       type: "withdrawal",
       amount: withdrawAmount,
+      coin: selectedCoin,
       status: "pending",
       note: "Withdrawal request submitted",
       toHash: walletAddress,
@@ -60,17 +77,17 @@ router.post("/", protect, async (req, res) => {
       success: true,
       message: "Withdrawal request submitted",
       withdrawal,
-      balance: user.balance,
+      balance: wallet.balances,
     });
   } catch (error) {
     console.error("Withdrawal submit error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
+      error: error.message,
     });
   }
 });
-
 // ADMIN: get all withdrawals
 router.get("/", protect, adminOnly, async (req, res) => {
   try {
