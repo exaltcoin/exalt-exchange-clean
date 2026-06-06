@@ -81,6 +81,8 @@ router.post("/", protect, async (req, res) => {
     });
   } catch (error) {
     console.error("Withdrawal submit error:", error);
+    console.error("Withdrawal error message:", error.message);
+console.error("Withdrawal error stack:", error.stack);
     res.status(500).json({
       success: false,
       message: "Server error",
