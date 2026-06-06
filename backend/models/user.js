@@ -20,6 +20,30 @@ const userSchema = new mongoose.Schema(
         type: Number,
         default:0,
       },
+      phone: {
+  type: String,
+  default: "",
+},
+
+country: {
+  type: String,
+  default: "",
+},
+
+telegram: {
+  type: String,
+  default: "",
+},
+
+bio: {
+  type: String,
+  default: "",
+},
+
+profileImage: {
+  type: String,
+  default: "",
+},
       EXALT: {
         type: Number,
         default:0,

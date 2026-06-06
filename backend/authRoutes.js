@@ -120,7 +120,43 @@ router.get("/me", protect, async (req, res) => {
     });
   }
 });
-  
+router.put("/profile", protect, async (req, res) => {
+  try {
+    const { name, phone, country, telegram, bio, profileImage } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        name,
+        phone,
+        country,
+        telegram,
+        bio,
+        profileImage,
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Profile update failed",
+      error: error.message,
+    });
+  }
+});  
 router.get("/admin/check", protect, adminOnly, async (req, res) => {
   res.json({
     success: true,
