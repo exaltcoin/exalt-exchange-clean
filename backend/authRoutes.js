@@ -6,7 +6,16 @@ const crypto = require("crypto");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const { protect, adminOnly } = require("./middleware/authMiddleware");
+const multer = require("multer");
 
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+});
 const router = express.Router();
 
 const generateToken = (id) => {
@@ -120,22 +129,33 @@ router.get("/me", protect, async (req, res) => {
     });
   }
 });
-router.put("/profile", protect, async (req, res) => {
+router.put("/profile", protect, upload.single("profileImage"), async (req, res) => {
   try {
-    const { name, phone, country, telegram, bio, profileImage } = req.body;
+   const { name, phone, country, telegram, bio } = req.body;
 
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      {
-        name,
-        phone,
-        country,
-        telegram,
-        bio,
-        profileImage,
-      },
-      { new: true }
-    ).select("-password");
+let profileImage = "";
+
+if (req.file) {
+  profileImage = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+}
+
+   const updateData = {
+  name,
+  phone,
+  country,
+  telegram,
+  bio,
+};
+
+if (profileImage) {
+  updateData.profileImage = profileImage;
+}
+
+const user = await User.findByIdAndUpdate(
+  req.user.id,
+  updateData,
+  { new: true }
+).select("-password");
 
     if (!user) {
       return res.status(404).json({
