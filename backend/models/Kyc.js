@@ -20,7 +20,6 @@ const kycSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
       trim: true,
-      unique: true,
       index: true,
     },
 
@@ -38,20 +37,45 @@ const kycSchema = new mongoose.Schema(
 
     idType: {
       type: String,
+      enum: ["CNIC", "Passport", "Driving License", "National ID"],
+      default: "CNIC",
       required: true,
-      trim: true,
     },
-
     idNumber: {
       type: String,
       required: true,
       trim: true,
     },
 
+    cnicFront: {
+      type: String,
+      default: "",
+    },
+
+    cnicBack: {
+      type: String,
+      default: "",
+    },
+
+    passportImage: {
+      type: String,
+      default: "",
+    },
+
+    selfieImage: {
+      type: String,
+      default: "",
+    },
+
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["not_submitted", "pending", "approved", "rejected"],
       default: "pending",
+    },
+
+    adminNote: {
+      type: String,
+      default: "",
     },
 
     reviewedAt: {
@@ -63,4 +87,4 @@ const kycSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Kyc", kycSchema);
+module.exports = mongoose.models.Kyc || mongoose.model("Kyc", kycSchema);

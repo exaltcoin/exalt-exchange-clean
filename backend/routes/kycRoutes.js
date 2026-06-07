@@ -1,7 +1,25 @@
 const express = require("express");
 const router = express.Router();
 const Kyc = require("../models/Kyc");
-router.post("/submit", async (req, res) => {
+const multer = require("multer");
+
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+});
+router.post(
+  "/submit",
+  upload.fields([
+    { name: "cnicFront", maxCount: 1 },
+    { name: "cnicBack", maxCount: 1 },
+    { name: "passportImage", maxCount: 1 },
+    { name: "selfieImage", maxCount: 1 },
+  ]),
+  async (req, res) => {
   try {
     const {
       userId,
@@ -12,7 +30,25 @@ router.post("/submit", async (req, res) => {
       idType,
       idNumber,
     } = req.body;
+const cnicFront =
+  req.files?.cnicFront?.[0]
+    ? `data:${req.files.cnicFront[0].mimetype};base64,${req.files.cnicFront[0].buffer.toString("base64")}`
+    : "";
 
+const cnicBack =
+  req.files?.cnicBack?.[0]
+    ? `data:${req.files.cnicBack[0].mimetype};base64,${req.files.cnicBack[0].buffer.toString("base64")}`
+    : "";
+
+const passportImage =
+  req.files?.passportImage?.[0]
+    ? `data:${req.files.passportImage[0].mimetype};base64,${req.files.passportImage[0].buffer.toString("base64")}`
+    : "";
+
+const selfieImage =
+  req.files?.selfieImage?.[0]
+    ? `data:${req.files.selfieImage[0].mimetype};base64,${req.files.selfieImage[0].buffer.toString("base64")}`
+    : "";
    if (
   !fullName ||
   !email ||
@@ -26,6 +62,16 @@ router.post("/submit", async (req, res) => {
         message: "All required fields missing",
       });
     }
+    if (
+  !cnicFront &&
+  !cnicBack &&
+  !passportImage
+) {
+  return res.status(400).json({
+    success: false,
+    message: "Please upload required identity documents",
+  });
+}
     console.log("KYC BODY:", req.body);
     console.log("USER ID:", userId);
 const cleanEmail = email.toLowerCase().trim();
@@ -52,6 +98,10 @@ if (existingKyc) {
   country,
   idType,
   idNumber,
+  cnicFront,
+cnicBack,
+passportImage,
+selfieImage,
   status: "pending",
 });
 await newKyc.save();
