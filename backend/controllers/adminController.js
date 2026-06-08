@@ -97,11 +97,19 @@ exports.approveWithdrawal = async (req, res) => {
       });
     }
 
-    if (finalStatus === "rejected") {
-      await User.findByIdAndUpdate(withdrawal.userId, {
-        $inc: { balance: Number(withdrawal.amount) },
-      });
-    }
+   if (finalStatus === "rejected") {
+  const coin = (withdrawal.coin || "USDT").toUpperCase();
+
+  await UserWallet.findOneAndUpdate(
+    { userId: withdrawal.userId },
+    {
+      $inc: {
+        [`balances.${coin}`]: Number(withdrawal.amount),
+      },
+    },
+    { upsert: true, new: true }
+  );
+}
 
     await Transaction.findOneAndUpdate(
       { withdrawalId: withdrawal._id, type: "withdrawal" },
