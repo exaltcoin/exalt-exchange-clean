@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Transaction = require("../models/Transaction");
-const { protect } = require("../middleware/authMiddleware");
-
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 router.get("/", protect, async (req, res) => {
   try {
     const transactions = await Transaction.find({
