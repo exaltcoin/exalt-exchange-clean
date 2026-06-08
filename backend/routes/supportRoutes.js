@@ -1,13 +1,12 @@
 const express = require("express");
 const router = express.Router();
-
+const { protect } = require("../middleware/authMiddleware");
 const SupportTicket = require("../models/SupportTicket");
 
 // CREATE SUPPORT TICKET
-router.post("/", async (req, res) => {
+router.post("/", protect, async (req, res) => {
   try {
-    const { wallet, message } = req.body;
-
+  const { wallet, message, userName, userEmail } = req.body;
     if (!wallet || !message) {
       return res.status(400).json({
         success: false,
@@ -18,6 +17,8 @@ router.post("/", async (req, res) => {
     const ticket = await SupportTicket.create({
       wallet,
       message,
+      userName: userName || req.user.name,
+      userEmail: userEmail || req.user.email,
       status: "pending",
     });
 

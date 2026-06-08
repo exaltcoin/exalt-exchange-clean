@@ -12,6 +12,17 @@ const supportTicketSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    userName: {
+  type: String,
+  default: "",
+  trim: true,
+},
+
+userEmail: {
+  type: String,
+  default: "",
+  trim: true,
+},
     status: {
       type: String,
       enum: ["pending", "resolved", "closed"],
