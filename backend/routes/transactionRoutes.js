@@ -20,5 +20,21 @@ router.get("/", protect, async (req, res) => {
     });
   }
 });
+router.get("/admin", protect, adminOnly, async (req, res) => {
+  try {
+    const transactions = await Transaction.find()
+      .sort({ createdAt: -1 })
+      .limit(200);
 
+    res.json({
+      success: true,
+      transactions,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 module.exports = router;
