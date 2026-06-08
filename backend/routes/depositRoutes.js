@@ -11,7 +11,9 @@ const { protect, adminOnly } = require("../middleware/authMiddleware");
 // ADMIN ONLY: get all deposit requests
 router.get("/", protect, adminOnly, async (req, res) => {
   try {
-    const requests = await Deposit.find().sort({ createdAt: -1 });
+    const requests = await Deposit.find()
+  .populate("userId", "name email")
+  .sort({ createdAt: -1 });
 
     res.json({
       success: true,
