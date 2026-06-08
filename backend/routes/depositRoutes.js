@@ -28,7 +28,7 @@ router.get("/", protect, adminOnly, async (req, res) => {
 // USER: create deposit request
 router.post("/", protect, async (req, res) => {
   try {
-    const { amount, coin, network, transactionId, txHash, proofUrl } = req.body;
+  const { amount, coin, network, transactionId, txHash, proofUrl, senderName, senderAccount } = req.body;
     const reference = txHash || transactionId || proofUrl;
 
 if (!reference || reference.trim().length < 3) {
@@ -55,6 +55,8 @@ if (!reference || reference.trim().length < 3) {
 txHash: reference,
 proofUrl: reference,
       status: "pending",
+      senderName: senderName || req.user.name,
+      senderAccount: senderAccount || req.user.accountNumber,
     });
 
     res.status(201).json({
@@ -137,7 +139,14 @@ if (status === "rejected") {
       }
 
       const coin = (request.coin || "USDT").toUpperCase();
+const allowedCoins = ["USDT", "BNB", "EXALT"];
 
+if (!allowedCoins.includes(coin)) {
+  return res.status(400).json({
+    success: false,
+    message: "Unsupported coin",
+  });
+}
 const wallet = await UserWallet.findOneAndUpdate(
   { userId: request.userId },
   {

@@ -167,9 +167,19 @@ router.post("/status", protect, adminOnly, async (req, res) => {
 
     // If rejected, refund balance only once
     if (status === "rejected") {
-      await User.findByIdAndUpdate(withdrawal.userId, {
-        $inc: { balance: Number(withdrawal.amount) },
-      });
+     const refundWallet = await UserWallet.findOne({
+  userId: withdrawal.userId,
+});
+
+if (refundWallet) {
+  const refundCoin = (withdrawal.coin || "USDT").toUpperCase();
+
+  refundWallet.balances[refundCoin] =
+    Number(refundWallet.balances?.[refundCoin] || 0) +
+    Number(withdrawal.amount);
+
+  await refundWallet.save();
+}
     }
 
     await Transaction.findOneAndUpdate(

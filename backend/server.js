@@ -5,6 +5,7 @@ const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 const connectDB = require("./config/db");
 const { notFound, errorHandler } = require("./middleware/appError");
+const { protect, adminOnly } = require("./middleware/authMiddleware");
 const listingRoutes = require("./routes/listingRoutes");
 const authRoutes = require("./authRoutes");
 const depositRoutes = require("./routes/depositRoutes");
@@ -111,12 +112,19 @@ app.get("/api/test", (req, res) => {
     message: "Backend API working",
   });
 });
-app.get("/api/transactions", async (req, res) => {
+app.get("/api/transactions", protect, adminOnly, async (req, res) => {
   try {
     const transactions = await Transaction.find().sort({ createdAt: -1 });
-    res.json({ success: true, transactions });
+
+    res.json({
+      success: true,
+      transactions,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 app.use(notFound);

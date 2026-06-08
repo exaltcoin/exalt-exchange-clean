@@ -42,8 +42,7 @@ exports.getWallet = async (req, res) => {
 // =========================
 exports.depositFunds = async (req, res) => {
   try {
-    const { amount, txHash, network } = req.body;
-
+   const { amount, txHash, network, senderName, senderAccount } = req.body;
     const depositAmount = Number(amount);
 
     if (!depositAmount || depositAmount <= 0) {
@@ -76,6 +75,8 @@ exports.depositFunds = async (req, res) => {
       txHash,
       network: network || "BSC",
       status: "pending",
+      senderName: senderName || req.user.name,
+      senderAccount: senderAccount || req.user.accountNumber,
     });
 
     await Transaction.create({
