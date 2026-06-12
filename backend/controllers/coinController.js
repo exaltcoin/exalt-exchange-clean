@@ -31,3 +31,46 @@ exports.addCoin = async (req, res) => {
     });
   }
 };
+exports.getWeb3Coins = async (req, res) => {
+  try {
+    const coins = await Coin.find({
+      status: "active",
+      $or: [
+        { marketType: "web3" },
+        { marketType: "both" }
+      ]
+    });
+
+    res.json({
+      success: true,
+      coins,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getMarketCoins = async (req, res) => {
+  try {
+    const coins = await Coin.find({
+      status: "active",
+      $or: [
+        { marketType: "market" },
+        { marketType: "both" }
+      ]
+    });
+
+    res.json({
+      success: true,
+      coins,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
