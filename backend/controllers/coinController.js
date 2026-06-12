@@ -77,10 +77,18 @@ exports.getMarketCoins = async (req, res) => {
 };
 exports.syncDexMarketCoins = async (req, res) => {
   try {
-    const queries = [
-      "bnb","usdt","btc","eth","cake","doge","shib","pepe","xrp","ada",
-      "trx","link","sol","avax","matic","arb","op","floki","bonk","wif",
-      "ltc","dot","near","atom","apt","sui","inj","fil","sand","mana"
+      const queries = [
+  "bnb","usdt","btc","eth","cake","doge","shib","pepe","xrp","ada",
+  "trx","link","sol","avax","matic","arb","op","floki","bonk","wif",
+  "ltc","dot","near","atom","apt","sui","inj","fil","sand","mana",
+  "uni","aave","crv","comp","1inch","gmt","gala","axs","egld","ftm",
+  "rune","blur","mask","bat","ens","snx","cvx","yfi","ldo","rdnt",
+  "pendle","jto","pyth","jup","sei","tia","strk","not","ton","kas",
+  "bome","meme","people","turbo","mog","babydoge","safemoon","volt",
+  "cult","coti","ach","alice","api3","band","celr","dent","dusk",
+  "hook","joe","kava","mina","ocean","om","pha","reef","rose","storj",
+  "sxp","twt","xvs","zil","zrx","woo","spell","magic","cfx","core"
+
     ];
 
     const responses = await Promise.all(
