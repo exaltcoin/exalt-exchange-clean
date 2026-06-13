@@ -87,7 +87,18 @@ exports.syncDexMarketCoins = async (req, res) => {
   "bome","meme","people","turbo","mog","babydoge","safemoon","volt",
   "cult","coti","ach","alice","api3","band","celr","dent","dusk",
   "hook","joe","kava","mina","ocean","om","pha","reef","rose","storj",
-  "sxp","twt","xvs","zil","zrx","woo","spell","magic","cfx","core"
+  "sxp","twt","xvs","zil","zrx","woo","spell","magic","cfx","core",
+"usdc", "busd", "dai", "fdusd","exaltcoin",
+"weth", "wbnb", "tusd",
+"ltc", "bch", "etc", "eos", "xtz",
+"chz", "enj", "hot", "iotx", "one",
+"ankr", "ckb", "lina", "lrc", "skl",
+"ankr", "jasmy", "iost", "polyx", "ssv",
+"rpl", "fxs", "gmt", "edu", "id",
+"arkm", "ace", "manta", "alt", "pixel",
+"aevo", "saga", "bb", "zro", "zk",
+"lista", "banana", "dogs", "hmstr", "cat",
+"neiro", "act", "pnut", "goat", "moodeng"
 
     ];
 
@@ -130,9 +141,33 @@ exports.syncDexMarketCoins = async (req, res) => {
         { upsert: true, new: true }
       );
     }
-
-    const coins = await CoinMarket.find().sort({ volume24h: -1 }).limit(1000);
-
+await CoinMarket.findOneAndUpdate(
+  {
+    symbol: "EXALT"
+  },
+  {
+    symbol: "EXALT",
+    name: "Exalt Coin",
+    chain: "BSC",
+    address: "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78",
+    logo: "/logos/exalt.png",
+    priceUsd: 0,
+    liquidityUsd: 0,
+    volume24h: 0,
+    marketCap: 0,
+    updatedAt: new Date()
+  },
+  {
+    upsert: true,
+    new: true
+  }
+);
+    const coins = await CoinMarket.find().sort({ marketCap: -1, volume24h: -1 }).limit(1000);
+coins.sort((a, b) => {
+  if (a.symbol === "EXALT") return -1;
+  if (b.symbol === "EXALT") return 1;
+  return 0;
+});
     res.json({
       success: true,
       count: coins.length,
@@ -148,8 +183,12 @@ exports.syncDexMarketCoins = async (req, res) => {
 
 exports.getAllMarketCoins = async (req, res) => {
   try {
-    const coins = await CoinMarket.find().sort({ volume24h: -1 }).limit(1000);
-
+const coins = await CoinMarket.find().sort({ marketCap: -1, volume24h: -1 }).limit(1000);
+coins.sort((a, b) => {
+  if (a.symbol === "EXALT") return -1;
+  if (b.symbol === "EXALT") return 1;
+  return 0;
+});
     res.json({
       success: true,
       count: coins.length,
