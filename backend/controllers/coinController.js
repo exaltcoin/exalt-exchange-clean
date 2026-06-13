@@ -142,24 +142,30 @@ exports.syncDexMarketCoins = async (req, res) => {
       );
     }
 const exaltAddress = "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78";
-console.log("EXALT ADDRESS:", exaltAddress);
-console.log("DEX URL:", `https://api.dexscreener.com/latest/dex/tokens/${exaltAddress}`);
-let exaltPair = null;
+const poolAddress = "0x43ea1b28c3ce86c1a819646a723f0adabd33912a";
+
+let exaltData = {
+  priceUsd: 0,
+  liquidityUsd: 0,
+  volume24h: 0,
+  marketCap: 0,
+};
 
 try {
-  const exaltRes = await axios.get(
-    `https://api.dexscreener.com/latest/dex/tokens/${exaltAddress}`
+  const gtRes = await axios.get(
+    `https://api.geckoterminal.com/api/v2/networks/bsc/pools/${poolAddress}`
   );
 
-  const exaltPairs = exaltRes.data?.pairs || [];
-console.log("EXALT PAIRS FOUND:", exaltPairs.length);
-console.log("FIRST EXALT PAIR:", exaltPairs[0]);
-  exaltPair =
-    exaltPairs
-      .filter((p) => p.chainId === "bsc")
-      .sort((a, b) => Number(b.liquidity?.usd || 0) - Number(a.liquidity?.usd || 0))[0] || null;
+  const attr = gtRes.data?.data?.attributes || {};
+
+  exaltData = {
+    priceUsd: Number(attr.base_token_price_usd || 0),
+    liquidityUsd: Number(attr.reserve_in_usd || 0),
+    volume24h: Number(attr.volume_usd?.h24 || 0),
+    marketCap: Number(attr.fdv_usd || 0),
+  };
 } catch (e) {
-  console.log("EXALT DexScreener error:", e.message);
+  console.log("EXALT GeckoTerminal error:", e.message);
 }
 
 await CoinMarket.findOneAndUpdate(
@@ -170,13 +176,13 @@ await CoinMarket.findOneAndUpdate(
     chain: "BSC",
     address: exaltAddress,
     logo: "/logos/exalt.png",
-    priceUsd: Number(exaltPair?.priceUsd || 0),
-    liquidityUsd: Number(exaltPair?.liquidity?.usd || 0),
-    volume24h: Number(exaltPair?.volume?.h24 || 0),
-    marketCap: Number(exaltPair?.marketCap || exaltPair?.fdv || 0),
-    dexId: exaltPair?.dexId || "pancakeswap",
-    pairAddress: exaltPair?.pairAddress || "",
-    url: exaltPair?.url || "",
+    priceUsd: exaltData.priceUsd,
+    liquidityUsd: exaltData.liquidityUsd,
+    volume24h: exaltData.volume24h,
+    marketCap: exaltData.marketCap,
+    dexId: "pancakeswap_v2",
+    pairAddress: poolAddress,
+    url: `https://www.geckoterminal.com/bsc/pools/${poolAddress}`,
     updatedAt: new Date()
   },
   { upsert: true, new: true }
