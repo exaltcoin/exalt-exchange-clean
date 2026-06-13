@@ -142,7 +142,8 @@ exports.syncDexMarketCoins = async (req, res) => {
       );
     }
 const exaltAddress = "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78";
-
+console.log("EXALT ADDRESS:", exaltAddress);
+console.log("DEX URL:", `https://api.dexscreener.com/latest/dex/tokens/${exaltAddress}`);
 let exaltPair = null;
 
 try {
@@ -151,7 +152,8 @@ try {
   );
 
   const exaltPairs = exaltRes.data?.pairs || [];
-
+console.log("EXALT PAIRS FOUND:", exaltPairs.length);
+console.log("FIRST EXALT PAIR:", exaltPairs[0]);
   exaltPair =
     exaltPairs
       .filter((p) => p.chainId === "bsc")
