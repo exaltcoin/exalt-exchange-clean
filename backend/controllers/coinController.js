@@ -141,26 +141,43 @@ exports.syncDexMarketCoins = async (req, res) => {
         { upsert: true, new: true }
       );
     }
+const exaltAddress = "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78";
+
+let exaltPair = null;
+
+try {
+  const exaltRes = await axios.get(
+    `https://api.dexscreener.com/latest/dex/tokens/${exaltAddress}`
+  );
+
+  const exaltPairs = exaltRes.data?.pairs || [];
+
+  exaltPair =
+    exaltPairs
+      .filter((p) => p.chainId === "bsc")
+      .sort((a, b) => Number(b.liquidity?.usd || 0) - Number(a.liquidity?.usd || 0))[0] || null;
+} catch (e) {
+  console.log("EXALT DexScreener error:", e.message);
+}
+
 await CoinMarket.findOneAndUpdate(
-  {
-    symbol: "EXALT"
-  },
+  { symbol: "EXALT" },
   {
     symbol: "EXALT",
     name: "Exalt Coin",
     chain: "BSC",
-    address: "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78",
+    address: exaltAddress,
     logo: "/logos/exalt.png",
-    priceUsd: 0,
-    liquidityUsd: 0,
-    volume24h: 0,
-    marketCap: 0,
+    priceUsd: Number(exaltPair?.priceUsd || 0),
+    liquidityUsd: Number(exaltPair?.liquidity?.usd || 0),
+    volume24h: Number(exaltPair?.volume?.h24 || 0),
+    marketCap: Number(exaltPair?.marketCap || exaltPair?.fdv || 0),
+    dexId: exaltPair?.dexId || "pancakeswap",
+    pairAddress: exaltPair?.pairAddress || "",
+    url: exaltPair?.url || "",
     updatedAt: new Date()
   },
-  {
-    upsert: true,
-    new: true
-  }
+  { upsert: true, new: true }
 );
     const coins = await CoinMarket.find().sort({ marketCap: -1, volume24h: -1 }).limit(1000);
 coins.sort((a, b) => {
