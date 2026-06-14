@@ -138,8 +138,8 @@ function startBinanceStream(io) {
   });
 
   ws.on("close", () => {
-    console.log("Binance WebSocket Closed. Reconnecting...");
-    setTimeout(() => startBinanceStream(io), 30000);
+    console.log("Binance WebSocket Closed. Reconnect disabled.");
+   // setTimeout(() => startBinanceStream(io), 30000);
   });
 }
 
