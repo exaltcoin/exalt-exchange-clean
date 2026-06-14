@@ -139,7 +139,7 @@ function startBinanceStream(io) {
 
   ws.on("close", () => {
     console.log("Binance WebSocket Closed. Reconnecting...");
-    setTimeout(() => startBinanceStream(io), 3000);
+    setTimeout(() => startBinanceStream(io), 30000);
   });
 }
 
