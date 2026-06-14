@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Transaction = require("../models/Transaction");
 const User = require("../models/user");
+const Trade = require("../models/Trade");
 async function matchOrder(newOrder) {
   const oppositeType = newOrder.type === "buy" ? "sell" : "buy";
 
@@ -62,7 +63,16 @@ async function matchOrder(newOrder) {
       txHash: `TRADE-${Date.now()}`,
     });
   }
-
+await Trade.create({
+  pair: newOrder.pair,
+  buyOrderId: newOrder.type === "buy" ? newOrder._id : oldOrder._id,
+  sellOrderId: newOrder.type === "sell" ? newOrder._id : oldOrder._id,
+  buyerId,
+  sellerId,
+  price: tradePrice,
+  amount: tradeAmount,
+  total: tradeValue
+});
   await newOrder.save();
   return newOrder;
 }
