@@ -155,7 +155,13 @@ router.get("/all-history", async (req, res) => {
       const tokenData = await tokenResponse.json();
 
       if (tokenData.result) {
-        const tokenTxs = tokenData.result.map((tx) => ({
+  const verifiedTxs = tokenData.result.filter(
+    (tx) =>
+      tx.address &&
+      tx.address.toLowerCase() === contract.toLowerCase()
+  );
+
+  const tokenTxs = verifiedTxs.map((tx) => ({
           type:
             tx.to_address?.toLowerCase() === address
               ? `Receive ${coin}`
