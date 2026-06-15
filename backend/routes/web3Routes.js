@@ -8,58 +8,70 @@ router.get("/latest-receive", async (req, res) => {
     if (!wallet || !coin) {
       return res.status(400).json({
         success: false,
-        message: "Wallet and coin are required"
+        message: "Wallet and coin are required",
       });
     }
 
-    const apiKey = process.env.BSCSCAN_API_KEY;
+    const apiKey = process.env.MORALIS_API_KEY;
 
     const tokenContracts = {
       EXALT: "0xd9a9236ba831D5d059Fbb5f8238AaFcC3BBe0A78",
-      USDT: "0x55d398326f99059fF775485246999027B3197955"
+      USDT: "0x55d398326f99059fF775485246999027B3197955",
     };
 
-    const address = wallet.toLowerCase();
-    let url = "";
-
     if (coin === "BNB") {
-    url = `https://api.bscscan.com/api?module=account&action=txlist&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
-    } else {
-      url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${tokenContracts[coin]}&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+      return res.json({
+        success: false,
+        message: "BNB receive history not enabled yet",
+      });
     }
 
-    const response = await fetch(url);
+    const tokenAddress = tokenContracts[coin];
+    if (!tokenAddress) {
+      return res.json({
+        success: false,
+        message: "Token not supported",
+      });
+    }
+
+    const url = `https://deep-index.moralis.io/api/v2.2/${wallet}/erc20/transfers?chain=bsc&token_addresses=${tokenAddress}&limit=20`;
+
+    const response = await fetch(url, {
+      headers: {
+        accept: "application/json",
+        "X-API-Key": apiKey,
+      },
+    });
+
     const data = await response.json();
-console.log("API RESPONSE:", data);
-    if (!data.result || !Array.isArray(data.result)) {
-      return res.json({ success: false, message: "No transactions found" });
-    }
+    console.log("MORALIS RESPONSE:", data);
 
-    const transactions = data.result.filter(
-  (item) =>
-    item.to &&
-    item.to.toLowerCase() === address &&
-    item.isError !== "1"
-);
+    const result = data.result || [];
 
-const tx = transactions[0];
+    const tx = result.find(
+      (item) =>
+        item.to_address &&
+        item.to_address.toLowerCase() === wallet.toLowerCase()
+    );
 
     if (!tx) {
-      return res.json({ success: false, message: "No receive transaction found" });
+      return res.json({
+        success: false,
+        message: "No receive transaction found",
+      });
     }
 
-    res.json({
+    return res.json({
       success: true,
-      hash: tx.hash,
-    amount:
-  Number(tx.value) /
-  Math.pow(10, Number(tx.tokenDecimal || 18)),
-tokenDecimal: tx.tokenDecimal || "18" 
+      hash: tx.transaction_hash,
+      amount: tx.value_decimal || tx.value,
+      coin,
     });
   } catch (err) {
-    res.status(500).json({
+    console.log("Moralis receive tx error:", err);
+    return res.status(500).json({
       success: false,
-      message: err.message
+      message: err.message,
     });
   }
 });
