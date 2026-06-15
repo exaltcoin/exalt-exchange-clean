@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Web3Transaction = require("../models/web3Transaction");
+const Web3Transaction = require("../models/Web3Transaction");
 
 router.post("/", async (req, res) => {
   try {
