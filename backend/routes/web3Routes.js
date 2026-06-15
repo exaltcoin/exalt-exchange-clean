@@ -35,12 +35,14 @@ router.get("/latest-receive", async (req, res) => {
       return res.json({ success: false, message: "No transactions found" });
     }
 
-    const tx = data.result.find(
-      (item) =>
-        item.to &&
-        item.to.toLowerCase() === address &&
-        item.isError !== "1"
-    );
+    const transactions = data.result.filter(
+  (item) =>
+    item.to &&
+    item.to.toLowerCase() === address &&
+    item.isError !== "1"
+);
+
+const tx = transactions[0];
 
     if (!tx) {
       return res.json({ success: false, message: "No receive transaction found" });
@@ -49,8 +51,10 @@ router.get("/latest-receive", async (req, res) => {
     res.json({
       success: true,
       hash: tx.hash,
-      amount: tx.value,
-      tokenDecimal: tx.tokenDecimal || "18"
+    amount:
+  Number(tx.value) /
+  Math.pow(10, Number(tx.tokenDecimal || 18)),
+tokenDecimal: tx.tokenDecimal || "18" 
     });
   } catch (err) {
     res.status(500).json({
