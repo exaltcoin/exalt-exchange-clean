@@ -23,14 +23,14 @@ router.get("/latest-receive", async (req, res) => {
     let url = "";
 
     if (coin === "BNB") {
-      url = `https://api.bscscan.com/api?module=account&action=txlist&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+    url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=txlist&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
     } else {
-      url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${tokenContracts[coin]}&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+      url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${tokenContracts[coin]}&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
     }
 
     const response = await fetch(url);
     const data = await response.json();
-
+console.log("API RESPONSE:", data);
     if (!data.result || !Array.isArray(data.result)) {
       return res.json({ success: false, message: "No transactions found" });
     }
