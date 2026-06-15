@@ -23,9 +23,9 @@ router.get("/latest-receive", async (req, res) => {
     let url = "";
 
     if (coin === "BNB") {
-    url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=txlist&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+    url = `https://api.bscscan.com/api?module=account&action=txlist&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
     } else {
-      url = `https://api.etherscan.io/v2/api?chainid=56&module=account&action=tokentx&contractaddress=${tokenContracts[coin]}&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+      url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${tokenContracts[coin]}&address=${wallet}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
     }
 
     const response = await fetch(url);
