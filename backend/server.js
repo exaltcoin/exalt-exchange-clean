@@ -27,6 +27,7 @@ const kycRoutes = require("./routes/kycRoutes");
 const otpRoutes = require("./routes/otpRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const web3Routes = require("./routes/web3Routes");
+const web3TransactionRoutes = require("./routes/web3TransactionRoutes");
 const {
   startBinanceStream,
 } = require("./services/binanceService"); 
@@ -100,6 +101,7 @@ app.use("/api/deposit-request", depositRoutes);
 app.use("/api/support-ticket", supportRoutes);
 app.use("/api/kyc", kycRoutes);
 app.use("/api/web3", web3Routes);
+app.use("/api/web3-transactions", web3TransactionRoutes);
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
