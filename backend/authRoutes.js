@@ -116,7 +116,51 @@ if (user.twoFactorEnabled) {
     res.status(500).json({ success: false, message: "Login failed" });
   }
 });
+router.post("/2fa/login-verify", async (req, res) => {
+  try {
+    const { userId, token } = req.body;
+    const user = await User.findById(userId);
 
+    if (!user || !user.twoFactorSecret) {
+      return res.status(400).json({
+        success: false,
+        message: "2FA not enabled",
+      });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: "base32",
+      token,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid 2FA code",
+      });
+    }
+
+    res.json({
+      success: true,
+      token: generateToken(user._id),
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        balance: user.balance,
+        twoFactorEnabled: user.twoFactorEnabled,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 router.get("/me", protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
