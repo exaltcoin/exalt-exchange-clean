@@ -15,6 +15,11 @@ const createListing = async (req, res) => {
       chart: req.body.chart,
       price: req.body.price,
       liquidity: req.body.liquidity,
+      ownerName: req.body.ownerName,
+ownerEmail: req.body.ownerEmail,
+ownerWallet: req.body.ownerWallet,
+projectCategory: req.body.projectCategory,
+whitepaper: req.body.whitepaper,
       status: "pending",
     });
 

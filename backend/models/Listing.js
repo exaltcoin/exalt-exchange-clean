@@ -18,6 +18,11 @@ const listingSchema = new mongoose.Schema(
     marketCap: String,
     liquidity: String,
     description: String,
+    ownerName: String,
+ownerEmail: String,
+ownerWallet: String,
+projectCategory: String,
+whitepaper: String,
     status: {
       type: String,
       default: "pending",

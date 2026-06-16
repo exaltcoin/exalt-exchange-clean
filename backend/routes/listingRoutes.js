@@ -30,25 +30,35 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const {
-      coinName,
-      symbol,
-      website,
-      telegram,
-      twitter,
-      contractAddress,
-      description,
-    } = req.body;
+  coinName,
+  symbol,
+  website,
+  telegram,
+  twitter,
+  contractAddress,
+  description,
+  ownerName,
+  ownerEmail,
+  ownerWallet,
+  projectCategory,
+  whitepaper,
+} = req.body;
 
-    const newListing = new Listing({
-      coinName,
-      symbol,
-      website,
-      telegram,
-      twitter,
-      contractAddress,
-      description,
-      status: "pending",
-    });
+   const newListing = new Listing({
+  coinName,
+  symbol,
+  website,
+  telegram,
+  twitter,
+  contractAddress,
+  description,
+  ownerName,
+  ownerEmail,
+  ownerWallet,
+  projectCategory,
+  whitepaper,
+  status: "pending",
+});
 
     await newListing.save();
 
