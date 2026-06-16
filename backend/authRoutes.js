@@ -6,6 +6,8 @@ const crypto = require("crypto");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 const { protect, adminOnly } = require("./middleware/authMiddleware");
+const speakeasy = require("speakeasy");
+const qrcode = require("qrcode");
 const multer = require("multer");
 
 const storage = multer.memoryStorage();
@@ -89,6 +91,14 @@ if (!isMatch) {
   return res.status(401).json({
     success: false,
     message: "Invalid email or password",
+  });
+}
+if (user.twoFactorEnabled) {
+  return res.json({
+    success: true,
+    require2FA: true,
+    userId: user._id,
+    message: "2FA verification required"
   });
 }
     res.json({
@@ -267,6 +277,123 @@ router.post("/reset-password/:token", async (req, res) => {
     res.json({
       success: true,
       message: "Password reset successful",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+router.post("/2fa/setup", protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const secret = speakeasy.generateSecret({
+      name: `Exalt Exchange (${user.email})`,
+      issuer: "Exalt Exchange",
+    });
+
+    user.twoFactorSecret = secret.base32;
+    await user.save();
+
+    const qrCode = await qrcode.toDataURL(secret.otpauth_url);
+
+    res.json({
+      success: true,
+      qrCode,
+      secret: secret.base32,
+      message: "2FA setup generated",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+router.post("/2fa/verify", protect, async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user || !user.twoFactorSecret) {
+      return res.status(400).json({
+        success: false,
+        message: "2FA is not set up",
+      });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: "base32",
+      token,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid 2FA code",
+      });
+    }
+
+    user.twoFactorEnabled = true;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "2FA enabled successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+router.post("/2fa/disable", protect, async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user || !user.twoFactorSecret) {
+      return res.status(400).json({
+        success: false,
+        message: "2FA is not enabled",
+      });
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: "base32",
+      token,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid 2FA code",
+      });
+    }
+
+    user.twoFactorEnabled = false;
+    user.twoFactorSecret = "";
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "2FA disabled successfully",
     });
   } catch (error) {
     res.status(500).json({
