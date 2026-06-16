@@ -17,7 +17,23 @@ router.post("/", async (req, res) => {
     });
   }
 });
+router.get("/", async (req, res) => {
+  try {
+    const transactions = await Web3Transaction.find({})
+      .sort({ createdAt: -1 })
+      .limit(200);
 
+    res.json({
+      success: true,
+      transactions,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 router.get("/:wallet", async (req, res) => {
   try {
     const transactions = await Web3Transaction.find({
