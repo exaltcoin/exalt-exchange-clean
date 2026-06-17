@@ -31,6 +31,7 @@ if (score >= 80) {
       bscscan: req.body.bscscan,
       chart: req.body.chart,
       price: req.body.price,
+      marketCap: req.body.marketCap,
       liquidity: req.body.liquidity,
       ownerName: req.body.ownerName,
 ownerEmail: req.body.ownerEmail,
