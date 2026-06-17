@@ -2,6 +2,23 @@ const Listing = require("../models/Listing");
 
 const createListing = async (req, res) => {
   try {
+    let score = 0;
+
+if (req.body.kycVerified) score += 15;
+if (req.body.liquidityLocked) score += 20;
+if (req.body.auditAvailable) score += 20;
+if (req.body.websiteVerified) score += 10;
+if (req.body.telegramVerified) score += 10;
+if (req.body.xVerified) score += 10;
+if (req.body.teamVerified) score += 15;
+
+let riskLevel = "High Risk";
+
+if (score >= 80) {
+  riskLevel = "Low Risk";
+} else if (score >= 50) {
+  riskLevel = "Medium Risk";
+}
     const listing = await Listing.create({
       coinName: req.body.coinName,
       symbol: req.body.symbol,
@@ -20,6 +37,18 @@ ownerEmail: req.body.ownerEmail,
 ownerWallet: req.body.ownerWallet,
 projectCategory: req.body.projectCategory,
 whitepaper: req.body.whitepaper,
+safetyScore: score,
+riskLevel,
+
+checks: {
+  kycVerified: req.body.kycVerified,
+  liquidityLocked: req.body.liquidityLocked,
+  auditAvailable: req.body.auditAvailable,
+  websiteVerified: req.body.websiteVerified,
+  telegramVerified: req.body.telegramVerified,
+  xVerified: req.body.xVerified,
+  teamVerified: req.body.teamVerified,
+},
       status: "pending",
     });
 

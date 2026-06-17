@@ -23,6 +23,53 @@ ownerEmail: String,
 ownerWallet: String,
 projectCategory: String,
 whitepaper: String,
+safetyScore: {
+  type: Number,
+  default: 0,
+},
+
+riskLevel: {
+  type: String,
+  enum: ["Low Risk", "Medium Risk", "High Risk"],
+  default: "High Risk",
+},
+
+checks: {
+  kycVerified: {
+    type: Boolean,
+    default: false,
+  },
+
+  liquidityLocked: {
+    type: Boolean,
+    default: false,
+  },
+
+  auditAvailable: {
+    type: Boolean,
+    default: false,
+  },
+
+  websiteVerified: {
+    type: Boolean,
+    default: false,
+  },
+
+  telegramVerified: {
+    type: Boolean,
+    default: false,
+  },
+
+  xVerified: {
+    type: Boolean,
+    default: false,
+  },
+
+  teamVerified: {
+    type: Boolean,
+    default: false,
+  },
+},
     status: {
       type: String,
       default: "pending",
