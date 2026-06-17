@@ -42,6 +42,12 @@ router.post("/", async (req, res) => {
   ownerWallet,
   projectCategory,
   whitepaper,
+  network,
+price,
+marketCap,
+liquidity,
+chart,
+buy,
 } = req.body;
 
    const newListing = new Listing({
@@ -57,6 +63,12 @@ router.post("/", async (req, res) => {
   ownerWallet,
   projectCategory,
   whitepaper,
+  network,
+price,
+marketCap,
+liquidity,
+chart,
+buy,
   status: "pending",
 });
 
