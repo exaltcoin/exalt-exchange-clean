@@ -147,4 +147,8 @@ function getPrice(symbol) {
   return latestPrices[symbol?.toUpperCase()] || 0;
 }
 
-module.exports = { startBinanceStream, getPrice };
+module.exports = {
+  startBinanceStream,
+  getPrice,
+  latestPrices,
+};
