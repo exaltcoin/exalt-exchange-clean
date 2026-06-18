@@ -10,12 +10,20 @@ const transactionSchema = new mongoose.Schema(
     },
 
     type: {
-      type: String,
-      enum: [
-        "deposit", "withdrawal", "trade", "reward", "fee", "adjustment"],
-      required: true,
-      index: true,
-    },
+  type: String,
+  enum: [
+    "deposit",
+    "withdrawal",
+    "trade",
+    "reward",
+    "fee",
+    "adjustment",
+    "p2p",
+    "P2P_ORDER_CREATED",
+    "P2P_ORDER_RELEASED"
+  ],
+  required: true
+},
 
     amount: {
       type: Number,
@@ -24,13 +32,18 @@ const transactionSchema = new mongoose.Schema(
       default: 0,
     },
 
-    status: {
-      type: String,
-      enum: [
-        "pending", "approved", "rejected", "failed"],
-      default: "pending",
-      index: true,
-    },
+   status: {
+  type: String,
+  enum: [
+    "pending",
+    "approved",
+    "rejected",
+    "failed",
+    "completed",
+    "success"
+  ],
+  default: "pending"
+},
 
     txHash: {
       type: String,

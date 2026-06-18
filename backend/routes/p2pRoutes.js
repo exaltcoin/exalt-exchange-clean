@@ -22,16 +22,18 @@ const upload = multer({
 // Create P2P ad
 router.post("/create", async (req, res) => {
   try {
-    const {
-      sellerId,
-      asset,
-      fiat,
-      type,
-      price,
-      amount,
-      paymentMethod,
-      walletAddress,
-    } = req.body;
+   const {
+  sellerId,
+  asset,
+  fiat,
+  type,
+  price,
+  amount,
+  paymentMethod,
+  walletAddress,
+  country,
+  countryFlag,
+} = req.body; 
 
     if (!sellerId || !type || !price || !amount || !paymentMethod) {
       return res.status(400).json({
@@ -62,15 +64,17 @@ router.post("/create", async (req, res) => {
       remaining: Number(amount),
       paymentMethod,
       walletAddress: walletAddress || "",
+      country: country || "Global",
+countryFlag: countryFlag || "🌍",
       status: "open",
     });
 await Transaction.create({
   userId: sellerId,
-  type: "P2P_ORDER_CREATED",
+  type: "p2p",
   amount: Number(amount),
   asset: asset || "EXALT",
-  status: "completed",
-  note: `P2P ${type} order created`,
+  status: "success",
+  note: "P2P order created",
 });
     res.status(201).json({
       success: true,
