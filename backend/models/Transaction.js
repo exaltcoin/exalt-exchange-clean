@@ -9,7 +9,7 @@ const transactionSchema = new mongoose.Schema(
       index: true,
     },
 
-    type: {
+   type: {
   type: String,
   enum: [
     "deposit",
@@ -18,9 +18,14 @@ const transactionSchema = new mongoose.Schema(
     "reward",
     "fee",
     "adjustment",
+
     "p2p",
+
     "P2P_ORDER_CREATED",
-    "P2P_ORDER_RELEASED"
+    "P2P_ORDER_ACCEPTED",
+    "P2P_PAYMENT_SENT",
+    "P2P_ORDER_RELEASED",
+    "P2P_ORDER_CANCELLED"
   ],
   required: true
 },
