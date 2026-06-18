@@ -20,6 +20,7 @@ if (score >= 80) {
   riskLevel = "Medium Risk";
 }
     const listing = await Listing.create({
+      user: req.user._id,
       coinName: req.body.coinName,
       symbol: req.body.symbol,
       network: req.body.network,

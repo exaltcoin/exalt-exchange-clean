@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const Listing = require("../models/Listing");
-
+const { protect } = require("../middleware/authMiddleware");
 // ==============================
 // GET ALL LISTINGS
 // ==============================
@@ -27,7 +27,7 @@ router.get("/", async (req, res) => {
 // ==============================
 // CREATE NEW LISTING
 // ==============================
-router.post("/", async (req, res) => {
+router.post("/", protect, async (req, res) => {
   try {
     const {
   coinName,
@@ -51,6 +51,7 @@ buy,
 } = req.body;
 
    const newListing = new Listing({
+    user: req.user._id,
   coinName,
   symbol,
   website,
@@ -85,6 +86,27 @@ buy,
     res.status(500).json({
       success: false,
       message: "Listing submit failed",
+    });
+  }
+});
+// ==========================
+// GET MY LISTINGS
+// ==========================
+router.get("/my-listings", protect, async (req, res) => {
+  try {
+    const listings = await Listing.find({ user: req.user._id }).sort({
+      createdAt: -1,
+    });
+
+    res.json({
+      success: true,
+      listings,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch my listings",
     });
   }
 });

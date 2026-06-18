@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const listingSchema = new mongoose.Schema(
   {
+   user: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+}, 
     coinName: String,
     symbol: String,
     chain: String,
