@@ -75,19 +75,23 @@ const getAISummary = async (req, res) => {
   }
 };
 const { buildTradingSignal } = require("../services/aiEngine");
-const { latestPrices } = require("../services/binanceService");
-
+const { getPrice } = require("../services/binanceService");
 const getTradingAssistant = async (req, res) => {
   try {
-    let btc = latestPrices["btcusdt"];
+    const btcPrice = getPrice("btcusdt");
 
-if (!btc) {
-  btc = {
-    price: 105000,
-    changePercent: 1.2,
-    volume: 25000000,
-  };
+if (!btcPrice || btcPrice <= 0) {
+  return res.status(404).json({
+    success: false,
+    message: "Real BTC price not available yet",
+  });
 }
+
+const btc = {
+  price: btcPrice,
+  changePercent: 0,
+  volume: 0,
+};
     const signal = buildTradingSignal({
       symbol: "BTCUSDT",
       price: btc.price,
