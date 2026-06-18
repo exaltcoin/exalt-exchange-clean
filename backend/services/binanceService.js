@@ -144,7 +144,11 @@ function startBinanceStream(io) {
 }
 
 function getPrice(symbol) {
-  return latestPrices[symbol?.toUpperCase()] || 0;
+    if (!symbol) return 0;
+
+    symbol = symbol.toLowerCase();
+
+    return Number(latestPrices[symbol]) || 0;
 }
 
 module.exports = {
