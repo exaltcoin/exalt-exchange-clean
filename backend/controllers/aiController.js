@@ -74,9 +74,41 @@ const getAISummary = async (req, res) => {
     });
   }
 };
+const { buildTradingSignal } = require("../services/aiEngine");
+const { latestPrices } = require("../services/binanceService");
 
+const getTradingAssistant = async (req, res) => {
+  try {
+    const btc = latestPrices["btcusdt"];
+
+    if (!btc) {
+      return res.status(404).json({
+        success: false,
+        message: "Market data unavailable",
+      });
+    }
+
+    const signal = buildTradingSignal({
+      symbol: "BTCUSDT",
+      price: btc.price,
+      changePercent: btc.changePercent,
+      volume: btc.volume,
+    });
+
+    res.json({
+      success: true,
+      records: [signal],
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   getAIRecords,
   createAIRecord,
   getAISummary,
+  getTradingAssistant,
 };
