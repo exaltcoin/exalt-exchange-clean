@@ -98,14 +98,14 @@ function startBinanceStream(io) {
 
     if (!data.data) return;
 
-    if (data.data.e === "trade") {
-      latestPrices[data.data.s] = Number(data.data.p);
-
+   if (data.data.e === "trade") {
+  const symbol = data.data.s.toLowerCase();
+  latestPrices[symbol] = Number(data.data.p);
       if (!io) return;
 
       io.emit("marketUpdate", {
         type: "price",
-        symbol: data.data.s,
+        symbol,
         price: Number(data.data.p),
       });
     }
