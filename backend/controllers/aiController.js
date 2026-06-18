@@ -78,16 +78,16 @@ const { buildTradingSignal } = require("../services/aiEngine");
 
 const getTradingAssistant = async (req, res) => {
   try {
-    const response = await fetch(
-  "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT"
+   const response = await fetch(
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true"
 );
 
 const market = await response.json();
 
 const btc = {
-  price: Number(market.lastPrice),
-  changePercent: Number(market.priceChangePercent),
-  volume: Number(market.volume),
+  price: Number(market.bitcoin.usd),
+  changePercent: Number(market.bitcoin.usd_24h_change),
+  volume: 0,
 };
 
 
