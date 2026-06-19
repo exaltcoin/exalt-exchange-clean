@@ -78,18 +78,21 @@ const { buildTradingSignal } = require("../services/aiEngine");
 
 const getTradingAssistant = async (req, res) => {
   try {
-   const response = await fetch(
-  "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT"
+  const response = await fetch(
+  "https://api.exchange.coinbase.com/products/BTC-USD/stats"
 );
 
 const market = await response.json();
 
+const last = Number(market.last);
+const open = Number(market.open);
+const change = open > 0 ? ((last - open) / open) * 100 : 0;
+
 const btc = {
-  price: Number(market.lastPrice),
-  changePercent: Number(market.priceChangePercent),
+  price: last,
+  changePercent: change,
   volume: Number(market.volume),
 };
-
     const signal = buildTradingSignal({
       symbol: "BTCUSDT",
       price: btc.price,
