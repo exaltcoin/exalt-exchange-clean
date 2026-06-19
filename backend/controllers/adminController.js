@@ -32,7 +32,7 @@ exports.approveDeposit = async (req, res) => {
       });
     }
 
- const coin = (deposit.coin || "USDT").toUpperCase();
+ const coin = (deposit.coin || "EXALT").toUpperCase();
 await UserWallet.findOneAndUpdate(
   { userId: deposit.userId },
   {
