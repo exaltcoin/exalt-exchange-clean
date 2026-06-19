@@ -89,6 +89,8 @@ await wallet.save();
       wallet,
     });
   } catch (error) {
+    console.log(error);
+console.log(error.message);
     res.status(500).json({
       success: false,
       message: "Failed to start staking",
