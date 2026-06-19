@@ -39,21 +39,31 @@ const stakeCoins = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid staking duration" });
     }
 
-    const wallet = await UserWallet.findOne({ user: userId });
+    let wallet = await UserWallet.findOne({ user: userId });
 
-    if (!wallet) {
-      return res.status(404).json({ success: false, message: "Wallet not found" });
-    }
+if (!wallet) {
+  wallet = await UserWallet.create({
+    user: userId,
+    balances: {
+      USDT: 0,
+      BNB: 0,
+      EXALT: 0,
+    },
+  });
+}
 
-    const coinKey = coin.toLowerCase();
-    const balance = Number(wallet[coinKey] || 0);
+const coinSymbol = coin.toUpperCase();
+const balance = Number(wallet.balances?.[coinSymbol] || 0);
 
-    if (balance < Number(amount)) {
-      return res.status(400).json({ success: false, message: "Insufficient balance" });
-    }
+if (balance < Number(amount)) {
+  return res.status(400).json({
+    success: false,
+    message: `Insufficient ${coinSymbol} balance`,
+  });
+}
 
-    wallet[coinKey] = balance - Number(amount);
-    await wallet.save();
+wallet.balances[coinSymbol] = balance - Number(amount);
+await wallet.save();
 
     const startDate = new Date();
     const endDate = new Date(startDate);
