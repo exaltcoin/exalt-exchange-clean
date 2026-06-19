@@ -25,6 +25,8 @@ const getApyByDuration = (durationDays) => {
 const stakeCoins = async (req, res) => {
   try {
     const userId = req.user?._id || req.user?.id;
+    console.log("USER:", req.user);
+console.log("USER ID:", userId);
     const { amount, durationDays, coin = "EXALT", autoRenew = false } = req.body;
 
     if (!userId) {
@@ -39,11 +41,10 @@ const stakeCoins = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid staking duration" });
     }
 
-    let wallet = await UserWallet.findOne({ user: userId });
-
+   let wallet = await UserWallet.findOne({ userId: userId });
 if (!wallet) {
   wallet = await UserWallet.create({
-    user: userId,
+    userId: userId,
     balances: {
       USDT: 0,
       BNB: 0,
