@@ -96,7 +96,7 @@ const btc = {
       changePercent: btc.changePercent,
       volume: btc.volume,
     });
-
+console.log(btc);
     res.json({
       success: true,
       records: [signal],
