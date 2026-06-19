@@ -83,7 +83,13 @@ const getTradingAssistant = async (req, res) => {
 );
 
 const market = await response.json();
-
+if (!market.bitcoin || !market.bitcoin.usd) {
+  return res.status(503).json({
+    success: false,
+    message: "CoinGecko price unavailable",
+    market,
+  });
+}
 const btc = {
   price: Number(market.bitcoin.usd),
   changePercent: Number(market.bitcoin.usd_24h_change),
