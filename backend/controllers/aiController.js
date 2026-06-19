@@ -78,8 +78,10 @@ const { buildTradingSignal } = require("../services/aiEngine");
 
 const getTradingAssistant = async (req, res) => {
   try {
-  const response = await fetch(
-  "https://api.exchange.coinbase.com/products/BTC-USD/stats"
+ const symbol = req.query.symbol || "BTC-USD";
+
+const response = await fetch(
+`https://api.exchange.coinbase.com/products/${symbol}/stats`
 );
 
 const market = await response.json();
@@ -93,8 +95,9 @@ const btc = {
   changePercent: change,
   volume: Number(market.volume),
 };
-    const signal = buildTradingSignal({
-      symbol: "BTCUSDT",
+  
+const signal = buildTradingSignal({
+  symbol,
       price: btc.price,
       changePercent: btc.changePercent,
       volume: btc.volume,
