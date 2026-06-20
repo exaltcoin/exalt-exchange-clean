@@ -31,6 +31,7 @@ const web3TransactionRoutes = require("./routes/web3TransactionRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const stakingRoutes = require("./routes/stakingRoutes");
 const adminStakingRoutes = require("./routes/adminStakingRoutes");
+const learnEarnRoutes = require("./routes/learnEarnRoutes");
 const {
   startBinanceStream,
 } = require("./services/binanceService"); 
@@ -108,6 +109,7 @@ app.use("/api/web3-transactions", web3TransactionRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/staking", stakingRoutes);
 app.use("/api/admin/staking", adminStakingRoutes);
+app.use("/api/learnearn", learnEarnRoutes);
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
