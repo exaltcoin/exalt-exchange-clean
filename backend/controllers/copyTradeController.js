@@ -157,9 +157,7 @@ const getMyCopyTrades = async (req, res) => {
 
 const getAllCopyTrades = async (req, res) => {
   try {
-    const copies = await CopyTrade.find()
-      .populate("userId", "name email")
-      .sort({ createdAt: -1 });
+    const copies = await CopyTrade.find().sort({ createdAt: -1 });
 
     res.json({
       success: true,
@@ -167,6 +165,7 @@ const getAllCopyTrades = async (req, res) => {
     });
   } catch (error) {
     console.error("Get All Copy Trades Error:", error);
+
     res.status(500).json({
       success: false,
       message: "Failed to load all copy trades",
