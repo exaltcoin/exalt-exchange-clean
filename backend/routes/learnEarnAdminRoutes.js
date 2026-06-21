@@ -7,7 +7,7 @@ const router = express.Router();
 router.get("/", protect, adminOnly, async (req, res) => {
   try {
     const records = await LearnEarn.find()
-      .populate("user", "name email")
+     .populate("userId", "name email")
       .sort({ createdAt: -1 });
 
     const totalUsers = new Set(
