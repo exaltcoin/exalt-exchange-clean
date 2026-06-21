@@ -1,4 +1,4 @@
-const AIPortfolio = require("../models/AIPortfolio");
+const AIPortfolio = require("../models/AiPortfolio");
 
 const getAllAIPortfolios = async (req, res) => {
   try {

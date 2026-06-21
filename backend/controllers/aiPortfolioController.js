@@ -1,4 +1,4 @@
-const AIPortfolio = require("../models/AIPortfolio");
+const AIPortfolio = require("../models/AiPortfolio");
 
 const defaultAssets = [
   { symbol: "BTC", name: "Bitcoin", balance: 0.015, value: 1050, allocation: 42, change24h: 1.8 },
