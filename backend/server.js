@@ -32,7 +32,7 @@ const aiRoutes = require("./routes/aiRoutes");
 const stakingRoutes = require("./routes/stakingRoutes");
 const adminStakingRoutes = require("./routes/adminStakingRoutes");
 const learnEarnRoutes = require("./routes/learnEarnRoutes");
-import learnEarnAdminRoutes from "./routes/learnEarnAdminRoutes.js";
+const learnEarnAdminRoutes = require("./routes/learnEarnAdminRoutes");
 const {
   startBinanceStream,
 } = require("./services/binanceService"); 
