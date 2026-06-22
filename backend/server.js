@@ -36,6 +36,7 @@ const learnEarnAdminRoutes = require("./routes/learnEarnAdminRoutes");
 const copyTradeRoutes = require("./routes/copyTradeRoutes");
 const aiPortfolioRoutes = require("./routes/aiPortfolioRoutes");
 const adminAIPortfolioRoutes = require("./routes/adminAIPortfolioRoutes");
+const socialRoutes = require("./routes/socialRoutes");
 const {
   startBinanceStream,
 } = require("./services/binanceService"); 
@@ -118,6 +119,7 @@ app.use("/api/admin/learnearn", learnEarnAdminRoutes);
 app.use("/api/copy", copyTradeRoutes);
 app.use("/api/portfolio", aiPortfolioRoutes);
 app.use("/api/admin/portfolio", adminAIPortfolioRoutes);
+app.use("/api/social", socialRoutes);
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
