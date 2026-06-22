@@ -16,8 +16,8 @@ const {
   verifyTrader,
   updateTraderStats,
   getAllTradersAdmin,
-unverifyTrader,
-adminDeletePost,
+  unverifyTrader,
+  adminDeletePost,
 } = require("../controllers/socialController");
 
 const { protect, adminOnly } = require("../middleware/authMiddleware");
@@ -39,26 +39,10 @@ router.get("/top-traders", protect, getTopTraders);
 
 /* ADMIN ROUTES */
 router.get("/admin/stats", protect, adminOnly, getSocialStats);
+router.get("/admin/traders", protect, adminOnly, getAllTradersAdmin);
 router.put("/admin/traders/:id/verify", protect, adminOnly, verifyTrader);
+router.put("/admin/traders/:id/unverify", protect, adminOnly, unverifyTrader);
 router.put("/admin/traders/:id/stats", protect, adminOnly, updateTraderStats);
-router.get(
-  "/admin/traders",
-  protect,
-  adminOnly,
-  getAllTradersAdmin
-);
+router.delete("/admin/posts/:id", protect, adminOnly, adminDeletePost);
 
-router.put(
-  "/admin/traders/:id/unverify",
-  protect,
-  adminOnly,
-  unverifyTrader
-);
-
-router.delete(
-  "/admin/posts/:id",
-  protect,
-  adminOnly,
-  adminDeletePost
-);
 module.exports = router;
