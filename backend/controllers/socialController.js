@@ -8,9 +8,7 @@ exports.createPost = async (req, res) => {
   try {
     const { content, image, pair, tradeType, sentiment } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ message: "Post content is required" });
-    }
+    if (!content) return res.status(400).json({ message: "Post content is required" });
 
     const post = await SocialPost.create({
       trader: req.user._id,
@@ -21,11 +19,7 @@ exports.createPost = async (req, res) => {
       sentiment: sentiment || "Neutral",
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Post created successfully",
-      post,
-    });
+    res.status(201).json({ success: true, message: "Post created successfully", post });
   } catch (error) {
     res.status(500).json({ message: "Create post failed", error: error.message });
   }
@@ -42,10 +36,7 @@ exports.getPosts = async (req, res) => {
       .populate("comments.user", "name email profileImage")
       .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      posts,
-    });
+    res.json({ success: true, posts });
   } catch (error) {
     res.status(500).json({ message: "Get posts failed", error: error.message });
   }
@@ -57,10 +48,7 @@ exports.getPosts = async (req, res) => {
 exports.toggleLike = async (req, res) => {
   try {
     const post = await SocialPost.findById(req.params.id);
-
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" });
-    }
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     const userId = req.user._id.toString();
     const alreadyLiked = post.likes.some((id) => id.toString() === userId);
@@ -90,22 +78,12 @@ exports.toggleLike = async (req, res) => {
 exports.addComment = async (req, res) => {
   try {
     const { text } = req.body;
-
-    if (!text) {
-      return res.status(400).json({ message: "Comment text is required" });
-    }
+    if (!text) return res.status(400).json({ message: "Comment text is required" });
 
     const post = await SocialPost.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" });
-    }
-
-    post.comments.push({
-      user: req.user._id,
-      text,
-    });
-
+    post.comments.push({ user: req.user._id, text });
     await post.save();
 
     res.status(201).json({
@@ -119,15 +97,12 @@ exports.addComment = async (req, res) => {
 };
 
 /* =========================
-   DELETE POST
+   DELETE POST USER / ADMIN
 ========================= */
 exports.deletePost = async (req, res) => {
   try {
     const post = await SocialPost.findById(req.params.id);
-
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" });
-    }
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     const isOwner = post.trader.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
@@ -138,10 +113,7 @@ exports.deletePost = async (req, res) => {
 
     await post.deleteOne();
 
-    res.json({
-      success: true,
-      message: "Post deleted successfully",
-    });
+    res.json({ success: true, message: "Post deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Delete post failed", error: error.message });
   }
@@ -156,19 +128,11 @@ exports.upsertTraderProfile = async (req, res) => {
 
     const profile = await TraderProfile.findOneAndUpdate(
       { user: req.user._id },
-      {
-        displayName,
-        bio,
-        avatar,
-      },
+      { displayName, bio, avatar },
       { new: true, upsert: true }
     ).populate("user", "name email profileImage");
 
-    res.json({
-      success: true,
-      message: "Trader profile saved successfully",
-      profile,
-    });
+    res.json({ success: true, message: "Trader profile saved successfully", profile });
   } catch (error) {
     res.status(500).json({ message: "Save trader profile failed", error: error.message });
   }
@@ -191,10 +155,7 @@ exports.getMyTraderProfile = async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      profile,
-    });
+    res.json({ success: true, profile });
   } catch (error) {
     res.status(500).json({ message: "Get trader profile failed", error: error.message });
   }
@@ -210,14 +171,9 @@ exports.getTraderProfile = async (req, res) => {
       .populate("followers", "name email profileImage")
       .populate("following", "name email profileImage");
 
-    if (!profile) {
-      return res.status(404).json({ message: "Trader profile not found" });
-    }
+    if (!profile) return res.status(404).json({ message: "Trader profile not found" });
 
-    res.json({
-      success: true,
-      profile,
-    });
+    res.json({ success: true, profile });
   } catch (error) {
     res.status(500).json({ message: "Get trader profile failed", error: error.message });
   }
@@ -237,13 +193,8 @@ exports.toggleFollowTrader = async (req, res) => {
     let myProfile = await TraderProfile.findOne({ user: req.user._id });
     let traderProfile = await TraderProfile.findOne({ user: traderUserId });
 
-    if (!myProfile) {
-      myProfile = await TraderProfile.create({ user: req.user._id });
-    }
-
-    if (!traderProfile) {
-      traderProfile = await TraderProfile.create({ user: traderUserId });
-    }
+    if (!myProfile) myProfile = await TraderProfile.create({ user: req.user._id });
+    if (!traderProfile) traderProfile = await TraderProfile.create({ user: traderUserId });
 
     const alreadyFollowing = myProfile.following.some(
       (id) => id.toString() === traderUserId
@@ -253,7 +204,6 @@ exports.toggleFollowTrader = async (req, res) => {
       myProfile.following = myProfile.following.filter(
         (id) => id.toString() !== traderUserId
       );
-
       traderProfile.followers = traderProfile.followers.filter(
         (id) => id.toString() !== req.user._id.toString()
       );
@@ -285,10 +235,7 @@ exports.getTopTraders = async (req, res) => {
       .sort({ roi: -1, winRate: -1, profit: -1 })
       .limit(20);
 
-    res.json({
-      success: true,
-      traders,
-    });
+    res.json({ success: true, traders });
   } catch (error) {
     res.status(500).json({ message: "Get top traders failed", error: error.message });
   }
@@ -301,27 +248,35 @@ exports.getSocialStats = async (req, res) => {
   try {
     const totalPosts = await SocialPost.countDocuments();
     const totalTraders = await TraderProfile.countDocuments();
-    const verifiedTraders = await TraderProfile.countDocuments({
-      verifiedTrader: true,
-    });
+    const verifiedTraders = await TraderProfile.countDocuments({ verifiedTrader: true });
 
     const posts = await SocialPost.find();
-
     const totalLikes = posts.reduce((sum, post) => sum + post.likes.length, 0);
     const totalComments = posts.reduce((sum, post) => sum + post.comments.length, 0);
 
     res.json({
       success: true,
-      stats: {
-        totalPosts,
-        totalTraders,
-        verifiedTraders,
-        totalLikes,
-        totalComments,
-      },
+      stats: { totalPosts, totalTraders, verifiedTraders, totalLikes, totalComments },
     });
   } catch (error) {
     res.status(500).json({ message: "Get social stats failed", error: error.message });
+  }
+};
+
+/* =========================
+   ADMIN: GET ALL TRADERS
+========================= */
+exports.getAllTradersAdmin = async (req, res) => {
+  try {
+    const traders = await TraderProfile.find()
+      .populate("user", "name email profileImage role")
+      .populate("followers", "name email profileImage")
+      .populate("following", "name email profileImage")
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, traders });
+  } catch (error) {
+    res.status(500).json({ message: "Get all traders failed", error: error.message });
   }
 };
 
@@ -336,17 +291,30 @@ exports.verifyTrader = async (req, res) => {
       { new: true }
     );
 
-    if (!profile) {
-      return res.status(404).json({ message: "Trader profile not found" });
-    }
+    if (!profile) return res.status(404).json({ message: "Trader profile not found" });
 
-    res.json({
-      success: true,
-      message: "Trader verified successfully",
-      profile,
-    });
+    res.json({ success: true, message: "Trader verified successfully", profile });
   } catch (error) {
     res.status(500).json({ message: "Verify trader failed", error: error.message });
+  }
+};
+
+/* =========================
+   ADMIN: UNVERIFY TRADER
+========================= */
+exports.unverifyTrader = async (req, res) => {
+  try {
+    const profile = await TraderProfile.findByIdAndUpdate(
+      req.params.id,
+      { verifiedTrader: false },
+      { new: true }
+    );
+
+    if (!profile) return res.status(404).json({ message: "Trader profile not found" });
+
+    res.json({ success: true, message: "Trader unverified successfully", profile });
+  } catch (error) {
+    res.status(500).json({ message: "Unverify trader failed", error: error.message });
   }
 };
 
@@ -359,28 +327,31 @@ exports.updateTraderStats = async (req, res) => {
 
     const profile = await TraderProfile.findByIdAndUpdate(
       req.params.id,
-      {
-        totalTrades,
-        winRate,
-        roi,
-        profit,
-        riskLevel,
-        rank,
-        badges,
-      },
+      { totalTrades, winRate, roi, profit, riskLevel, rank, badges },
       { new: true }
     );
 
-    if (!profile) {
-      return res.status(404).json({ message: "Trader profile not found" });
-    }
+    if (!profile) return res.status(404).json({ message: "Trader profile not found" });
 
-    res.json({
-      success: true,
-      message: "Trader stats updated successfully",
-      profile,
-    });
+    res.json({ success: true, message: "Trader stats updated successfully", profile });
   } catch (error) {
     res.status(500).json({ message: "Update trader stats failed", error: error.message });
+  }
+};
+
+/* =========================
+   ADMIN: DELETE ANY POST
+========================= */
+exports.adminDeletePost = async (req, res) => {
+  try {
+    const post = await SocialPost.findById(req.params.id);
+
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    await post.deleteOne();
+
+    res.json({ success: true, message: "Admin deleted post successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Admin delete post failed", error: error.message });
   }
 };
