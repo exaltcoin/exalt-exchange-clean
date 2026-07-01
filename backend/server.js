@@ -144,14 +144,32 @@ io.on("connection", (socket) => {
     console.log("Socket disconnected:", socket.id);
   });
 });
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "Exalt Exchange Backend Live",
+    version: "cors-health-v2",
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "Server healthy",
+    backend: "Exalt Exchange",
+    version: "cors-health-v2",
+  });
+});
 
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
     message: "Server healthy",
     backend: "Exalt Exchange",
+    version: "cors-health-v2",
   });
 });
+
 
 app.use("/api/futures", futuresRoutes);
 app.use("/futures", futuresRoutes);
@@ -212,5 +230,6 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Exalt Exchange Backend running on port ${PORT}`);
+  console.log("Backend version: cors-health-v2");
 });
