@@ -1,98 +1,170 @@
-const Wallet = require("../models/Wallet");
+const UserWallet = require("../models/UserWallet");
+
+const ALLOWED_COINS = ["USDT", "BNB", "EXALT"];
+
+const normalizeCoin = (coin) => {
+  const symbol = String(coin || "").toUpperCase().trim();
+
+  if (!ALLOWED_COINS.includes(symbol)) {
+    throw new Error(`Unsupported coin: ${symbol}`);
+  }
+
+  return symbol;
+};
+
+const normalizeAmount = (amount) => {
+  const value = Number(amount);
+
+  if (!value || value <= 0) {
+    throw new Error("Amount must be greater than 0");
+  }
+
+  return value;
+};
 
 async function getOrCreateWallet(userId) {
-  let wallet = await Wallet.findOne({ userId });
-
-  if (!wallet) {
-    wallet = await Wallet.create({
-      userId,
-      balances: [],
-    });
+  if (!userId) {
+    throw new Error("User ID is required");
   }
+
+  const wallet = await UserWallet.findOneAndUpdate(
+    { userId },
+    {
+      $setOnInsert: {
+        userId,
+      },
+    },
+    {
+      new: true,
+      upsert: true,
+    }
+  );
 
   return wallet;
 }
 
 async function addBalance(userId, coin, amount) {
+  const symbol = normalizeCoin(coin);
+  const value = normalizeAmount(amount);
+
   const wallet = await getOrCreateWallet(userId);
 
-  const symbol = coin.toUpperCase();
-  let balance = wallet.balances.find((b) => b.coin === symbol);
-
-  if (!balance) {
-    wallet.balances.push({
-      coin: symbol,
-      available: amount,
-      locked: 0,
-    });
-  } else {
-    balance.available += amount;
+  if (wallet.isFrozen) {
+    throw new Error(wallet.freezeReason || "Wallet is frozen");
   }
+
+  wallet.balances[symbol] = Number(wallet.balances?.[symbol] || 0) + value;
 
   await wallet.save();
   return wallet;
 }
 
 async function subtractBalance(userId, coin, amount) {
+  const symbol = normalizeCoin(coin);
+  const value = normalizeAmount(amount);
+
   const wallet = await getOrCreateWallet(userId);
 
-  const symbol = coin.toUpperCase();
-  const balance = wallet.balances.find((b) => b.coin === symbol);
+  if (wallet.isFrozen) {
+    throw new Error(wallet.freezeReason || "Wallet is frozen");
+  }
 
-  if (!balance || balance.available < amount) {
+  const available = Number(wallet.balances?.[symbol] || 0);
+
+  if (available < value) {
     throw new Error(`Insufficient ${symbol} balance`);
   }
 
-  balance.available -= amount;
+  wallet.balances[symbol] = available - value;
 
   await wallet.save();
   return wallet;
 }
 
 async function lockBalance(userId, coin, amount) {
+  const symbol = normalizeCoin(coin);
+  const value = normalizeAmount(amount);
+
   const wallet = await getOrCreateWallet(userId);
 
-  const symbol = coin.toUpperCase();
+  if (wallet.isFrozen) {
+    throw new Error(wallet.freezeReason || "Wallet is frozen");
+  }
 
-  const balance = wallet.balances.find(
-    (b) => b.coin === symbol
-  );
+  const available = Number(wallet.balances?.[symbol] || 0);
 
-  if (!balance || balance.available < amount) {
+  if (available < value) {
     throw new Error(`Insufficient ${symbol} balance`);
   }
 
-  balance.available -= amount;
-  balance.locked += amount;
+  wallet.balances[symbol] = available - value;
+  wallet.locked[symbol] = Number(wallet.locked?.[symbol] || 0) + value;
 
   await wallet.save();
-
   return wallet;
 }
 
 async function releaseBalance(userId, coin, amount) {
+  const symbol = normalizeCoin(coin);
+  const value = normalizeAmount(amount);
+
   const wallet = await getOrCreateWallet(userId);
 
-  const symbol = coin.toUpperCase();
+  const locked = Number(wallet.locked?.[symbol] || 0);
 
-  const balance = wallet.balances.find(
-    (b) => b.coin === symbol
-  );
-
-  if (!balance || balance.locked < amount) {
+  if (locked < value) {
     throw new Error(`Insufficient locked ${symbol}`);
   }
 
-  balance.locked -= amount;
+  wallet.locked[symbol] = locked - value;
+  wallet.balances[symbol] = Number(wallet.balances?.[symbol] || 0) + value;
 
   await wallet.save();
-
   return wallet;
 }
+
+async function unlockToAvailable(userId, coin, amount) {
+  return releaseBalance(userId, coin, amount);
+}
+
+async function deductLocked(userId, coin, amount) {
+  const symbol = normalizeCoin(coin);
+  const value = normalizeAmount(amount);
+
+  const wallet = await getOrCreateWallet(userId);
+
+  const locked = Number(wallet.locked?.[symbol] || 0);
+
+  if (locked < value) {
+    throw new Error(`Insufficient locked ${symbol}`);
+  }
+
+  wallet.locked[symbol] = locked - value;
+
+  await wallet.save();
+  return wallet;
+}
+
+async function getBalance(userId, coin) {
+  const symbol = normalizeCoin(coin);
+  const wallet = await getOrCreateWallet(userId);
+
+  return {
+    available: Number(wallet.balances?.[symbol] || 0),
+    locked: Number(wallet.locked?.[symbol] || 0),
+    total:
+      Number(wallet.balances?.[symbol] || 0) +
+      Number(wallet.locked?.[symbol] || 0),
+  };
+}
+
 module.exports = {
   getOrCreateWallet,
   addBalance,
   subtractBalance,
   lockBalance,
   releaseBalance,
+  unlockToAvailable,
+  deductLocked,
+  getBalance,
 };

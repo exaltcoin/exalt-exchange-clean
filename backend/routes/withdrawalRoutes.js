@@ -2,21 +2,15 @@ const express = require("express");
 const router = express.Router();
 
 const Withdrawal = require("../models/Withdrawal");
-const User = require("../models/user");
 const Transaction = require("../models/Transaction");
-const { protect, adminOnly } = require("../middleware/authMiddleware");
 const UserWallet = require("../models/UserWallet");
+const WalletLedger = require("../models/WalletLedger");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
+/* USER: create withdrawal request */
 router.post("/", protect, async (req, res) => {
   try {
-    const {
-      amount,
-      walletAddress,
-      method,
-      coin,
-      accountName,
-      accountNumber,
-    } = req.body;
+    const { amount, walletAddress, coin, network, note } = req.body;
 
     const withdrawAmount = Number(amount);
     const selectedCoin = (coin || "USDT").toUpperCase();
@@ -25,6 +19,15 @@ router.post("/", protect, async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Valid amount and withdrawal address are required",
+      });
+    }
+
+    const allowedCoins = ["USDT", "BNB", "EXALT"];
+
+    if (!allowedCoins.includes(selectedCoin)) {
+      return res.status(400).json({
+        success: false,
+        message: "Unsupported coin",
       });
     }
 
@@ -37,30 +40,53 @@ router.post("/", protect, async (req, res) => {
       });
     }
 
-    if (!wallet.balances) wallet.balances = {};
+    if (wallet.isFrozen) {
+      return res.status(403).json({
+        success: false,
+        message: wallet.freezeReason || "User wallet is frozen",
+      });
+    }
 
-    const currentBalance = Number(wallet.balances[selectedCoin] || 0);
+    const balanceBefore = Number(wallet.balances?.[selectedCoin] || 0);
 
-    if (currentBalance < withdrawAmount) {
+    if (balanceBefore < withdrawAmount) {
       return res.status(400).json({
         success: false,
         message: "Insufficient balance",
       });
     }
 
-    wallet.balances[selectedCoin] = currentBalance - withdrawAmount;
+    const balanceAfter = balanceBefore - withdrawAmount;
+
+    wallet.balances[selectedCoin] = balanceAfter;
     await wallet.save();
 
     const withdrawal = await Withdrawal.create({
       userId: req.user._id,
       amount: withdrawAmount,
       coin: selectedCoin,
-      method: method || "Crypto Wallet",
       walletAddress,
-      accountName,
-      accountNumber,
+      network: network || "BSC",
       status: "pending",
+      note: note || "Withdrawal request submitted",
     });
+
+    const ledger = await WalletLedger.create({
+      userId: req.user._id,
+      type: "WITHDRAWAL_DEBIT",
+      coin: selectedCoin,
+      amount: withdrawAmount,
+      balanceBefore,
+      balanceAfter,
+      referenceId: withdrawal._id,
+      referenceModel: "Withdrawal",
+      status: "SUCCESS",
+      note: "Withdrawal request submitted and balance debited",
+      createdBy: req.user._id,
+    });
+
+    withdrawal.walletLedgerId = ledger._id;
+    await withdrawal.save();
 
     await Transaction.create({
       userId: req.user._id,
@@ -81,21 +107,19 @@ router.post("/", protect, async (req, res) => {
     });
   } catch (error) {
     console.error("Withdrawal submit error:", error);
-    console.error("Withdrawal error message:", error.message);
-console.error("Withdrawal error stack:", error.stack);
     res.status(500).json({
       success: false,
-     message: error.message,
-      error: error.message,
+      message: error.message,
     });
   }
 });
-// ADMIN: get all withdrawals
+
+/* ADMIN: get all withdrawals */
 router.get("/", protect, adminOnly, async (req, res) => {
   try {
     const withdrawals = await Withdrawal.find()
       .sort({ createdAt: -1 })
-      .populate("userId", "name email balance role");
+      .populate("userId", "name email role");
 
     res.json({
       success: true,
@@ -110,7 +134,7 @@ router.get("/", protect, adminOnly, async (req, res) => {
   }
 });
 
-// USER: get own withdrawals
+/* USER: get own withdrawals */
 router.get("/my", protect, async (req, res) => {
   try {
     const withdrawals = await Withdrawal.find({ userId: req.user._id }).sort({
@@ -130,33 +154,22 @@ router.get("/my", protect, async (req, res) => {
   }
 });
 
-// ADMIN: approve/reject withdrawal
+/* ADMIN: approve/reject withdrawal */
 router.post("/status", protect, adminOnly, async (req, res) => {
   try {
-    const { id, status } = req.body;
+    const { id, status, txHash, adminRemark } = req.body;
 
-    const allowedStatuses = ["approved", "rejected"];
-
-    if (!id || !allowedStatuses.includes(status)) {
+    if (!id || !["approved", "rejected"].includes(status)) {
       return res.status(400).json({
         success: false,
         message: "Valid withdrawal id and status are required",
       });
     }
 
-    // Atomic update: only pending withdrawal can be processed
-    const withdrawal = await Withdrawal.findOneAndUpdate(
-      {
-        _id: id,
-        status: "pending",
-      },
-      {
-        status,
-        processedBy: req.user._id,
-        processedAt: new Date(),
-      },
-      { new: true }
-    );
+    const withdrawal = await Withdrawal.findOne({
+      _id: id,
+      status: "pending",
+    });
 
     if (!withdrawal) {
       return res.status(400).json({
@@ -165,22 +178,55 @@ router.post("/status", protect, adminOnly, async (req, res) => {
       });
     }
 
-    // If rejected, refund balance only once
-    if (status === "rejected") {
-     const refundWallet = await UserWallet.findOne({
-  userId: withdrawal.userId,
-});
+    const coin = (withdrawal.coin || "USDT").toUpperCase();
+    const amount = Number(withdrawal.amount);
 
-if (refundWallet) {
-  const refundCoin = (withdrawal.coin || "USDT").toUpperCase();
-
-  refundWallet.balances[refundCoin] =
-    Number(refundWallet.balances?.[refundCoin] || 0) +
-    Number(withdrawal.amount);
-
-  await refundWallet.save();
-}
+    if (status === "approved") {
+      withdrawal.status = "approved";
+      withdrawal.approvedBy = req.user._id;
+      withdrawal.approvedAt = new Date();
+      withdrawal.processedBy = req.user._id;
+      withdrawal.processedAt = new Date();
+      withdrawal.txHash = txHash || "";
+      withdrawal.adminRemark = adminRemark || "Withdrawal approved by admin";
     }
+
+    if (status === "rejected") {
+      const wallet = await UserWallet.findOne({ userId: withdrawal.userId });
+
+      if (wallet) {
+        const balanceBefore = Number(wallet.balances?.[coin] || 0);
+        const balanceAfter = balanceBefore + amount;
+
+        wallet.balances[coin] = balanceAfter;
+        wallet.totalWithdrawn[coin] = Number(wallet.totalWithdrawn?.[coin] || 0);
+
+        await wallet.save();
+
+        await WalletLedger.create({
+          userId: withdrawal.userId,
+          type: "WITHDRAWAL_REFUND",
+          coin,
+          amount,
+          balanceBefore,
+          balanceAfter,
+          referenceId: withdrawal._id,
+          referenceModel: "Withdrawal",
+          status: "SUCCESS",
+          note: "Withdrawal rejected and balance refunded",
+          createdBy: req.user._id,
+        });
+      }
+
+      withdrawal.status = "rejected";
+      withdrawal.rejectedBy = req.user._id;
+      withdrawal.rejectedAt = new Date();
+      withdrawal.processedBy = req.user._id;
+      withdrawal.processedAt = new Date();
+      withdrawal.adminRemark = adminRemark || "Withdrawal rejected and refunded";
+    }
+
+    await withdrawal.save();
 
     await Transaction.findOneAndUpdate(
       {
@@ -193,6 +239,7 @@ if (refundWallet) {
           status === "approved"
             ? "Withdrawal approved by admin"
             : "Withdrawal rejected and refunded",
+        toHash: withdrawal.walletAddress,
       },
       { new: true }
     );
@@ -206,7 +253,7 @@ if (refundWallet) {
     console.error("Withdrawal status error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: error.message || "Server error",
     });
   }
 });

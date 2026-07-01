@@ -1,70 +1,84 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/authMiddleware");
+
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 const SupportTicket = require("../models/SupportTicket");
 
-// CREATE SUPPORT TICKET
+/* USER: create support ticket */
 router.post("/", protect, async (req, res) => {
   try {
-  const { wallet, message, userName, userEmail } = req.body;
+    const { wallet, message } = req.body;
+
     if (!wallet || !message) {
       return res.status(400).json({
         success: false,
-        message: "All fields required",
+        message: "Wallet and message are required",
       });
     }
 
     const ticket = await SupportTicket.create({
+      userId: req.user._id,
       wallet,
       message,
-      userName: userName || req.user.name,
-      userEmail: userEmail || req.user.email,
+      userName: req.user.name,
+      userEmail: req.user.email,
       status: "pending",
     });
 
-    res.json({
+    res.status(201).json({
       success: true,
       message: "Support ticket submitted",
       ticket,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Create support ticket:", error);
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: error.message || "Server error",
     });
   }
 });
 
-// GET ALL TICKETS
-router.get("/", async (req, res) => {
+/* ADMIN: get all tickets */
+router.get("/", protect, adminOnly, async (req, res) => {
   try {
-    const tickets = await SupportTicket.find().sort({ createdAt: -1 });
-    res.json(tickets);
+    const tickets = await SupportTicket.find()
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 })
+      .limit(200);
+
+    res.json({
+      success: true,
+      tickets,
+    });
   } catch (error) {
-    console.log(error);
+    console.error("Get support tickets:", error);
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: error.message || "Server error",
     });
   }
 });
 
-// UPDATE TICKET STATUS
-router.post("/status", async (req, res) => {
+/* ADMIN: update ticket status */
+router.post("/status", protect, adminOnly, async (req, res) => {
   try {
     const { id, status } = req.body;
 
-    if (!id || !status) {
+    if (!id || !["pending", "open", "resolved", "closed"].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Ticket ID and status required",
+        message: "Valid ticket ID and status required",
       });
     }
 
     const ticket = await SupportTicket.findByIdAndUpdate(
       id,
-      { status },
+      {
+        status,
+        reviewedBy: req.user._id,
+        reviewedAt: new Date(),
+      },
       { new: true }
     );
 
@@ -81,20 +95,24 @@ router.post("/status", async (req, res) => {
       ticket,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Update support ticket:", error);
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: error.message || "Server error",
     });
   }
 });
 
-// RESOLVE TICKET
-router.put("/:id", async (req, res) => {
+/* ADMIN: resolve ticket */
+router.put("/:id", protect, adminOnly, async (req, res) => {
   try {
     const ticket = await SupportTicket.findByIdAndUpdate(
       req.params.id,
-      { status: "resolved" },
+      {
+        status: "resolved",
+        reviewedBy: req.user._id,
+        reviewedAt: new Date(),
+      },
       { new: true }
     );
 
@@ -111,10 +129,10 @@ router.put("/:id", async (req, res) => {
       ticket,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Resolve support ticket:", error);
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: error.message || "Server error",
     });
   }
 });

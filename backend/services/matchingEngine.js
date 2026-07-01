@@ -1,24 +1,27 @@
 const Order = require("../models/Order");
 const Transaction = require("../models/Transaction");
-const User = require("../models/user");
+const UserWallet = require("../models/UserWallet");
 const Trade = require("../models/Trade");
+const WalletLedger = require("../models/WalletLedger");
+
 async function matchOrder(newOrder) {
-  const oppositeType = newOrder.type === "buy" ? "sell" : "buy";
+  const side = String(newOrder.side || "").toLowerCase();
+  const oppositeSide = side === "buy" ? "sell" : "buy";
 
   const query = {
     pair: newOrder.pair,
-    type: oppositeType,
+    side: oppositeSide,
     status: { $in: ["open", "partial"] },
   };
 
-  if (newOrder.type === "buy") {
+  if (side === "buy") {
     query.price = { $lte: newOrder.price };
   } else {
     query.price = { $gte: newOrder.price };
   }
 
   const oppositeOrders = await Order.find(query).sort(
-    newOrder.type === "buy"
+    side === "buy"
       ? { price: 1, createdAt: 1 }
       : { price: -1, createdAt: 1 }
   );
@@ -26,53 +29,119 @@ async function matchOrder(newOrder) {
   for (const oldOrder of oppositeOrders) {
     if (newOrder.remaining <= 0) break;
 
-    const tradeAmount = Math.min(newOrder.remaining, oldOrder.remaining);
-    const tradePrice = oldOrder.price;
+    const tradeAmount = Math.min(
+      Number(newOrder.remaining),
+      Number(oldOrder.remaining)
+    );
+
+    const tradePrice = Number(oldOrder.price);
     const tradeValue = tradeAmount * tradePrice;
 
-    const buyerId = newOrder.type === "buy" ? newOrder.userId : oldOrder.userId;
-    const sellerId = newOrder.type === "sell" ? newOrder.userId : oldOrder.userId;
+    const buyerId = side === "buy" ? newOrder.userId : oldOrder.userId;
+    const sellerId = side === "sell" ? newOrder.userId : oldOrder.userId;
 
-    const buyer = await User.findById(buyerId);
-    const seller = await User.findById(sellerId);
+    const buyerWallet = await UserWallet.findOneAndUpdate(
+      { userId: buyerId },
+      { $setOnInsert: { userId: buyerId } },
+      { new: true, upsert: true }
+    );
 
-    if (!buyer || !seller) continue;
+    const sellerWallet = await UserWallet.findOneAndUpdate(
+      { userId: sellerId },
+      { $setOnInsert: { userId: sellerId } },
+      { new: true, upsert: true }
+    );
 
-    buyer.wallets.EXALT += tradeAmount;
-    seller.wallets.USDT += tradeValue;
+    if (buyerWallet.isFrozen || sellerWallet.isFrozen) {
+      continue;
+    }
 
-    await buyer.save();
-    await seller.save();
+    const buyerExaltBefore = Number(buyerWallet.balances.EXALT || 0);
+    const sellerUsdtBefore = Number(sellerWallet.balances.USDT || 0);
 
-    newOrder.filled += tradeAmount;
-    newOrder.remaining -= tradeAmount;
-    newOrder.status = newOrder.remaining === 0 ? "filled" : "partial";
+    buyerWallet.balances.EXALT = buyerExaltBefore + tradeAmount;
+    sellerWallet.balances.USDT = sellerUsdtBefore + tradeValue;
 
-    oldOrder.filled += tradeAmount;
-    oldOrder.remaining -= tradeAmount;
-    oldOrder.status = oldOrder.remaining === 0 ? "filled" : "partial";
+    await buyerWallet.save();
+    await sellerWallet.save();
+
+    newOrder.filled = Number(newOrder.filled || 0) + tradeAmount;
+    newOrder.remaining = Number(newOrder.remaining || 0) - tradeAmount;
+    newOrder.status = newOrder.remaining <= 0 ? "filled" : "partial";
+
+    oldOrder.filled = Number(oldOrder.filled || 0) + tradeAmount;
+    oldOrder.remaining = Number(oldOrder.remaining || 0) - tradeAmount;
+    oldOrder.status = oldOrder.remaining <= 0 ? "filled" : "partial";
 
     await oldOrder.save();
 
+    const trade = await Trade.create({
+      pair: newOrder.pair,
+      buyOrderId: side === "buy" ? newOrder._id : oldOrder._id,
+      sellOrderId: side === "sell" ? newOrder._id : oldOrder._id,
+      buyerId,
+      sellerId,
+      price: tradePrice,
+      amount: tradeAmount,
+      total: tradeValue,
+      buyerFee: 0,
+      sellerFee: 0,
+      feeCoin: "USDT",
+      maker: oldOrder.userId,
+      taker: newOrder.userId,
+      status: "SUCCESS",
+      source: "SPOT",
+    });
+
+    await WalletLedger.create({
+      userId: buyerId,
+      type: "SPOT_TRADE",
+      coin: "EXALT",
+      amount: tradeAmount,
+      balanceBefore: buyerExaltBefore,
+      balanceAfter: buyerWallet.balances.EXALT,
+      referenceId: trade._id,
+      referenceModel: "Trade",
+      status: "SUCCESS",
+      note: `Bought ${tradeAmount} EXALT @ ${tradePrice}`,
+      createdBy: buyerId,
+    });
+
+    await WalletLedger.create({
+      userId: sellerId,
+      type: "SPOT_TRADE",
+      coin: "USDT",
+      amount: tradeValue,
+      balanceBefore: sellerUsdtBefore,
+      balanceAfter: sellerWallet.balances.USDT,
+      referenceId: trade._id,
+      referenceModel: "Trade",
+      status: "SUCCESS",
+      note: `Sold ${tradeAmount} EXALT @ ${tradePrice}`,
+      createdBy: sellerId,
+    });
+
     await Transaction.create({
-      userId: newOrder.userId,
+      userId: buyerId,
       type: "trade",
       amount: tradeAmount,
+      coin: "EXALT",
       status: "completed",
-      note: `${newOrder.type.toUpperCase()} ${tradeAmount} ${newOrder.pair} @ ${tradePrice}`,
-      txHash: `TRADE-${Date.now()}`,
+      note: `BUY ${tradeAmount} ${newOrder.pair} @ ${tradePrice}`,
+      txHash: `TRADE-${trade._id}`,
+    });
+
+    await Transaction.create({
+      userId: sellerId,
+      type: "trade",
+      amount: tradeValue,
+      coin: "USDT",
+      status: "completed",
+      note: `SELL ${tradeAmount} ${newOrder.pair} @ ${tradePrice}`,
+      txHash: `TRADE-${trade._id}`,
     });
   }
-await Trade.create({
-  pair: newOrder.pair,
-  buyOrderId: newOrder.type === "buy" ? newOrder._id : oldOrder._id,
-  sellOrderId: newOrder.type === "sell" ? newOrder._id : oldOrder._id,
-  buyerId,
-  sellerId,
-  price: tradePrice,
-  amount: tradeAmount,
-  total: tradeValue
-});
+
   await newOrder.save();
   return newOrder;
 }

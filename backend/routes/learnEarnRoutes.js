@@ -1,4 +1,6 @@
 const express = require("express");
+const router = express.Router();
+
 const {
   getLearnEarnProgress,
   completeLesson,
@@ -6,10 +8,16 @@ const {
 
 const { protect } = require("../middleware/authMiddleware");
 
-const router = express.Router();
+/*
+=========================================
+USER ROUTES
+=========================================
+*/
 
+// Get user's Learn & Earn progress
 router.get("/", protect, getLearnEarnProgress);
 
+// Complete a lesson and claim reward
 router.post("/complete", protect, completeLesson);
 
 module.exports = router;

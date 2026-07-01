@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 
 const P2POrder = require("../models/P2POrder");
-const User = require("../models/user");
 const Transaction = require("../models/Transaction");
 const cloudinary = require("../services/cloudinaryService");
 const {
@@ -10,7 +9,10 @@ const {
   releaseBalance,
   addBalance,
 } = require("../services/walletService");
+
 const multer = require("multer");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
+
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -19,63 +21,76 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024,
   },
 });
-// Create P2P ad
-router.post("/create", async (req, res) => {
-  try {
-   const {
-  sellerId,
-  asset,
-  fiat,
-  type,
-  price,
-  amount,
-  paymentMethod,
-  walletAddress,
-  country,
-  countryFlag,
-} = req.body; 
 
-    if (!sellerId || !type || !price || !amount || !paymentMethod) {
+/* USER: Create P2P ad */
+router.post("/create", protect, async (req, res) => {
+  try {
+    const {
+      asset,
+      fiat,
+      type,
+      price,
+      amount,
+      paymentMethod,
+      walletAddress,
+      country,
+      countryFlag,
+    } = req.body;
+
+    const sellerId = req.user._id;
+
+    if (!type || !price || !amount || !paymentMethod) {
       return res.status(400).json({
         success: false,
-        message: "sellerId, type, price, amount, paymentMethod required",
+        message: "type, price, amount and paymentMethod are required",
       });
     }
 
-    const seller = await User.findById(sellerId);
-
-    if (!seller) {
-      return res.status(404).json({
+    if (!["buy", "sell"].includes(type)) {
+      return res.status(400).json({
         success: false,
-        message: "Seller not found",
+        message: "Invalid P2P order type",
       });
     }
 
-   if (type === "sell") {
-  await lockBalance(sellerId, asset || "EXALT", Number(amount));
-}
+    const selectedAsset = (asset || "EXALT").toUpperCase();
+    const orderAmount = Number(amount);
+
+    if (!orderAmount || orderAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid amount is required",
+      });
+    }
+
+    if (type === "sell") {
+      await lockBalance(sellerId, selectedAsset, orderAmount);
+    }
+
     const order = await P2POrder.create({
       sellerId,
-      asset: asset || "EXALT",
+      asset: selectedAsset,
       fiat: fiat || "KWD",
       type,
       price: Number(price),
-      amount: Number(amount),
-      remaining: Number(amount),
+      amount: orderAmount,
+      remaining: orderAmount,
       paymentMethod,
       walletAddress: walletAddress || "",
       country: country || "Global",
-countryFlag: countryFlag || "🌍",
+      countryFlag: countryFlag || "🌍",
       status: "open",
     });
-await Transaction.create({
-  userId: sellerId,
-  type: "p2p",
-  amount: Number(amount),
-  asset: asset || "EXALT",
-  status: "success",
-  note: "P2P order created",
-});
+
+    await Transaction.create({
+      userId: sellerId,
+      type: "p2p",
+      amount: orderAmount,
+      coin: selectedAsset,
+      status: "success",
+      note: "P2P order created",
+    });
+
     res.status(201).json({
       success: true,
       order,
@@ -88,10 +103,13 @@ await Transaction.create({
   }
 });
 
-// Get all P2P ads
+/* PUBLIC: Get all P2P ads */
 router.get("/orders", async (req, res) => {
   try {
-    const orders = await P2POrder.find().sort({ createdAt: -1 });
+    const orders = await P2POrder.find()
+      .populate("sellerId", "name email")
+      .populate("buyerId", "name email")
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
@@ -105,10 +123,10 @@ router.get("/orders", async (req, res) => {
   }
 });
 
-// Buyer accepts order
-router.post("/:id/accept", async (req, res) => {
+/* USER: Buyer accepts order */
+router.post("/:id/accept", protect, async (req, res) => {
   try {
-    const { buyerId } = req.body;
+    const buyerId = req.user._id;
 
     const order = await P2POrder.findById(req.params.id);
 
@@ -126,17 +144,26 @@ router.post("/:id/accept", async (req, res) => {
       });
     }
 
+    if (String(order.sellerId) === String(buyerId)) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot accept your own order",
+      });
+    }
+
     order.buyerId = buyerId;
     order.status = "matched";
-await Transaction.create({
-  userId: buyerId,
-  type: "P2P_ORDER_ACCEPTED",
-  amount: Number(order.amount),
-  asset: order.asset || "EXALT",
-  status: "completed",
-  note: "P2P order accepted",
-});
+
     await order.save();
+
+    await Transaction.create({
+      userId: buyerId,
+      type: "P2P_ORDER_ACCEPTED",
+      amount: Number(order.amount),
+      coin: order.asset || "EXALT",
+      status: "completed",
+      note: "P2P order accepted",
+    });
 
     res.json({
       success: true,
@@ -150,32 +177,11 @@ await Transaction.create({
   }
 });
 
-// Buyer marks paid
-router.post(
-  "/:id/paid",
-  upload.single("proof"),
-  async (req, res) => {
+/* USER: Buyer marks paid */
+router.post("/:id/paid", protect, upload.single("proof"), async (req, res) => {
   try {
-   let paymentProof = "";
+    let paymentProof = "";
 
-if (req.file) {
-  const uploadResult = await new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(
-        {
-          folder: "exalt-exchange/p2p-proofs",
-          resource_type: "image",
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      )
-      .end(req.file.buffer);
-  });
-
-  paymentProof = uploadResult.secure_url;
-}
     const order = await P2POrder.findById(req.params.id);
 
     if (!order) {
@@ -185,17 +191,52 @@ if (req.file) {
       });
     }
 
+    if (String(order.buyerId) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only buyer can mark this order as paid",
+      });
+    }
+
+    if (order.status !== "matched") {
+      return res.status(400).json({
+        success: false,
+        message: "Order must be matched before marking paid",
+      });
+    }
+
+    if (req.file) {
+      const uploadResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: "exalt-exchange/p2p-proofs",
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result);
+            }
+          )
+          .end(req.file.buffer);
+      });
+
+      paymentProof = uploadResult.secure_url;
+    }
+
     order.paymentProof = paymentProof;
     order.status = "paid";
-await Transaction.create({
- userId: order.buyerId,
- type: "P2P_PAYMENT_MARKED",
-  amount: Number(order.amount),
-  asset: order.asset || "EXALT",
-  status: "completed",
-  note: "P2P payment marked as paid",
-});
+
     await order.save();
+
+    await Transaction.create({
+      userId: order.buyerId,
+      type: "P2P_PAYMENT_MARKED",
+      amount: Number(order.amount),
+      coin: order.asset || "EXALT",
+      status: "completed",
+      note: "P2P payment marked as paid",
+    });
 
     res.json({
       success: true,
@@ -209,8 +250,8 @@ await Transaction.create({
   }
 });
 
-// Admin releases escrow
-router.post("/:id/release", async (req, res) => {
+/* ADMIN: Release escrow */
+router.post("/:id/release", protect, adminOnly, async (req, res) => {
   try {
     const order = await P2POrder.findById(req.params.id);
 
@@ -228,29 +269,28 @@ router.post("/:id/release", async (req, res) => {
       });
     }
 
-   if (!order.buyerId) {
-  return res.status(400).json({
-    success: false,
-    message: "Buyer ID missing",
-  });
-}
+    if (!order.buyerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Buyer ID missing",
+      });
+    }
 
-await addBalance(
-  order.buyerId,
-  order.asset || "EXALT",
-  Number(order.amount)
-);
+    await addBalance(order.buyerId, order.asset || "EXALT", Number(order.amount));
+
     order.status = "released";
     order.remaining = 0;
-await Transaction.create({
-  userId: order.buyerId,
-  type: "P2P_ORDER_RELEASED",
-  amount: Number(order.amount),
-  asset: order.asset || "EXALT",
-  status: "completed",
-  note: "P2P escrow released to buyer",
-});
+
     await order.save();
+
+    await Transaction.create({
+      userId: order.buyerId,
+      type: "P2P_ORDER_RELEASED",
+      amount: Number(order.amount),
+      coin: order.asset || "EXALT",
+      status: "completed",
+      note: "P2P escrow released to buyer",
+    });
 
     res.json({
       success: true,
@@ -263,8 +303,9 @@ await Transaction.create({
     });
   }
 });
-// Seller cancels order and gets escrow refund
-router.post("/:id/cancel", async (req, res) => {
+
+/* USER: Seller cancels open order */
+router.post("/:id/cancel", protect, async (req, res) => {
   try {
     const order = await P2POrder.findById(req.params.id);
 
@@ -275,15 +316,34 @@ router.post("/:id/cancel", async (req, res) => {
       });
     }
 
+    if (String(order.sellerId) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only seller can cancel this order",
+      });
+    }
+
     if (order.status !== "open") {
       return res.status(400).json({
         success: false,
         message: "Only open orders can be cancelled",
       });
     }
-   await releaseBalance(order.sellerId, order.asset || "EXALT", Number(order.amount));
-   order.status = "cancelled";
-await order.save();
+
+    await releaseBalance(order.sellerId, order.asset || "EXALT", Number(order.amount));
+
+    order.status = "cancelled";
+    await order.save();
+
+    await Transaction.create({
+      userId: order.sellerId,
+      type: "P2P_ORDER_CANCELLED",
+      amount: Number(order.amount),
+      coin: order.asset || "EXALT",
+      status: "completed",
+      note: "P2P order cancelled and escrow refunded",
+    });
+
     res.json({
       success: true,
       message: "Order cancelled and escrow refunded",
@@ -296,10 +356,14 @@ await order.save();
     });
   }
 });
-// Admin: get all P2P orders
-router.get("/admin/all", async (req, res) => {
+
+/* ADMIN: Get all P2P orders */
+router.get("/admin/all", protect, adminOnly, async (req, res) => {
   try {
-    const orders = await P2POrder.find().sort({ createdAt: -1 });
+    const orders = await P2POrder.find()
+      .populate("sellerId", "name email")
+      .populate("buyerId", "name email")
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
@@ -312,4 +376,5 @@ router.get("/admin/all", async (req, res) => {
     });
   }
 });
+
 module.exports = router;

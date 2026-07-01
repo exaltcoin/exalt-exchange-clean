@@ -7,12 +7,14 @@ const traderProfileSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       unique: true,
+      index: true,
     },
 
     displayName: {
       type: String,
       trim: true,
       default: "",
+      maxlength: 80,
     },
 
     bio: {
@@ -25,6 +27,7 @@ const traderProfileSchema = new mongoose.Schema(
     avatar: {
       type: String,
       default: "",
+      trim: true,
     },
 
     followers: [
@@ -44,6 +47,7 @@ const traderProfileSchema = new mongoose.Schema(
     totalTrades: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     winRate: {
@@ -67,24 +71,59 @@ const traderProfileSchema = new mongoose.Schema(
       type: String,
       enum: ["Low", "Medium", "High"],
       default: "Low",
+      index: true,
     },
 
     verifiedTrader: {
       type: Boolean,
       default: false,
+      index: true,
+    },
+
+    followersCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    followingCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    postsCount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
 
     rank: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     badges: {
       type: [String],
       default: [],
     },
+
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-module.exports = mongoose.model("TraderProfile", traderProfileSchema);
+traderProfileSchema.index({ verifiedTrader: 1 });
+traderProfileSchema.index({ roi: -1 });
+traderProfileSchema.index({ winRate: -1 });
+traderProfileSchema.index({ profit: -1 });
+
+module.exports =
+  mongoose.models.TraderProfile ||
+  mongoose.model("TraderProfile", traderProfileSchema);

@@ -2,12 +2,24 @@ const mongoose = require("mongoose");
 
 const p2pOrderSchema = new mongoose.Schema(
   {
-    sellerId: { type: String, required: true },
-    buyerId: { type: String, default: "" },
+    sellerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
+    buyerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
 
     asset: {
       type: String,
       default: "USDT",
+      uppercase: true,
       enum: [
         "EXALT",
         "USDT",
@@ -24,11 +36,13 @@ const p2pOrderSchema = new mongoose.Schema(
         "TON",
         "LINK",
       ],
+      index: true,
     },
 
     fiat: {
       type: String,
       default: "USD",
+      uppercase: true,
       enum: [
         "USD",
         "KWD",
@@ -51,17 +65,33 @@ const p2pOrderSchema = new mongoose.Schema(
         "CNY",
         "JPY",
       ],
+      index: true,
     },
 
     type: {
       type: String,
       enum: ["buy", "sell"],
       required: true,
+      index: true,
     },
 
-    price: { type: Number, required: true },
-    amount: { type: Number, required: true },
-    remaining: { type: Number, required: true },
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    amount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    remaining: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
 
     paymentMethod: {
       type: String,
@@ -102,13 +132,22 @@ const p2pOrderSchema = new mongoose.Schema(
       ],
     },
 
-    walletAddress: { type: String, default: "" },
-    paymentProof: { type: String, default: "" },
+    walletAddress: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    paymentProof: {
+      type: String,
+      default: "",
+    },
 
     country: {
       type: String,
-      required: true,
       default: "Global",
+      trim: true,
+      index: true,
     },
 
     countryFlag: {
@@ -118,11 +157,49 @@ const p2pOrderSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["open", "matched", "paid", "released", "cancelled", "disputed"],
+      enum: [
+        "open",
+        "matched",
+        "paid",
+        "released",
+        "cancelled",
+        "disputed",
+      ],
       default: "open",
+      index: true,
+    },
+
+    releasedAt: {
+      type: Date,
+      default: null,
+    },
+
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+
+    disputedAt: {
+      type: Date,
+      default: null,
+    },
+
+    releasedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    adminRemark: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 500,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
 module.exports =

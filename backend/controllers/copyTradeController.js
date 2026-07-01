@@ -1,4 +1,6 @@
 const CopyTrade = require("../models/CopyTrade");
+const UserWallet = require("../models/UserWallet");
+const WalletLedger = require("../models/WalletLedger");
 
 const topTraders = [
   {
@@ -35,6 +37,14 @@ const topTraders = [
     symbol: "BNB/USDT",
   },
 ];
+
+const getOrCreateWallet = async (userId) => {
+  return UserWallet.findOneAndUpdate(
+    { userId },
+    { $setOnInsert: { userId } },
+    { new: true, upsert: true }
+  );
+};
 
 const getTopTraders = async (req, res) => {
   try {
@@ -93,6 +103,31 @@ const startCopyTrade = async (req, res) => {
       });
     }
 
+    const wallet = await getOrCreateWallet(req.user._id);
+
+    if (wallet.isFrozen) {
+      return res.status(403).json({
+        success: false,
+        message: wallet.freezeReason || "User wallet is frozen",
+      });
+    }
+
+    const balanceBefore = Number(wallet.balances?.USDT || 0);
+
+    if (balanceBefore < amount) {
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient USDT balance for copy trading",
+      });
+    }
+
+    const balanceAfter = balanceBefore - amount;
+
+    wallet.balances.USDT = balanceAfter;
+    wallet.locked.USDT = Number(wallet.locked?.USDT || 0) + amount;
+
+    await wallet.save();
+
     const copy = await CopyTrade.create({
       userId: req.user._id,
       traderId,
@@ -103,20 +138,38 @@ const startCopyTrade = async (req, res) => {
       risk: risk || "Low",
       followers: followers || "0",
       copyAmount: amount,
+      lockedAmount: amount,
+      coin: "USDT",
       symbol: symbol || "BTC/USDT",
       status: "active",
+      startedAt: new Date(),
     });
 
-    res.json({
+    await WalletLedger.create({
+      userId: req.user._id,
+      type: "ADMIN_ADJUSTMENT",
+      coin: "USDT",
+      amount,
+      balanceBefore,
+      balanceAfter,
+      referenceId: copy._id,
+      referenceModel: "Admin",
+      status: "SUCCESS",
+      note: `USDT locked for AI Copy Trading: ${traderName}`,
+      createdBy: req.user._id,
+    });
+
+    res.status(201).json({
       success: true,
-      message: "Copy trading started successfully",
+      message: "Copy trading started and USDT balance locked successfully",
       copy,
+      wallet,
     });
   } catch (error) {
     console.error("Start Copy Trade Error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to start copy trading",
+      message: error.message || "Failed to start copy trading",
     });
   }
 };
@@ -157,7 +210,10 @@ const getMyCopyTrades = async (req, res) => {
 
 const getAllCopyTrades = async (req, res) => {
   try {
-    const copies = await CopyTrade.find().sort({ createdAt: -1 });
+    const copies = await CopyTrade.find()
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 })
+      .limit(300);
 
     res.json({
       success: true,
@@ -188,21 +244,59 @@ const stopCopyTrade = async (req, res) => {
       });
     }
 
+    const amount = Number(copy.lockedAmount || copy.copyAmount || 0);
+
+    const wallet = await getOrCreateWallet(req.user._id);
+
+    const lockedBefore = Number(wallet.locked?.USDT || 0);
+
+    if (lockedBefore < amount) {
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient locked USDT balance",
+      });
+    }
+
+    wallet.locked.USDT = lockedBefore - amount;
+
+    const balanceBefore = Number(wallet.balances?.USDT || 0);
+    const balanceAfter = balanceBefore + amount;
+
+    wallet.balances.USDT = balanceAfter;
+
+    await wallet.save();
+
     copy.status = "stopped";
     copy.stoppedAt = new Date();
+    copy.lockedAmount = 0;
 
     await copy.save();
 
+    await WalletLedger.create({
+      userId: req.user._id,
+      type: "ADMIN_ADJUSTMENT",
+      coin: "USDT",
+      amount,
+      balanceBefore,
+      balanceAfter,
+      referenceId: copy._id,
+      referenceModel: "Admin",
+      status: "SUCCESS",
+      note: `AI Copy Trading stopped and USDT unlocked: ${copy.traderName}`,
+      createdBy: req.user._id,
+    });
+
     res.json({
       success: true,
-      message: "Copy trading stopped successfully",
+      message: "Copy trading stopped and USDT unlocked successfully",
       copy,
+      wallet,
     });
   } catch (error) {
     console.error("Stop Copy Trade Error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to stop copy trading",
+      message: error.message || "Failed to stop copy trading",
     });
   }
 };

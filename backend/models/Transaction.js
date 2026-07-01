@@ -57,7 +57,20 @@ const transactionSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
+toHash: {
+  type: String,
+  default: "",
+  trim: true,
+  index: true,
+},
 
+coin: {
+  type: String,
+  default: "USDT",
+  uppercase: true,
+  trim: true,
+  index: true,
+},
     depositId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Deposit",

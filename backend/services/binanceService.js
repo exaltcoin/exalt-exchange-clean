@@ -151,8 +151,13 @@ function getPrice(symbol) {
     return Number(latestPrices[symbol]) || 0;
 }
 
+function getAllPrices() {
+  return latestPrices;
+}
+
 module.exports = {
   startBinanceStream,
   getPrice,
+  getAllPrices,
   latestPrices,
 };

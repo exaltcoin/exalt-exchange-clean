@@ -4,10 +4,11 @@ const Transaction = require("../models/Transaction");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 router.get("/", protect, async (req, res) => {
   try {
-    const transactions = await Transaction.find({
-      userId: req.user._id,
-    }).sort({ createdAt: -1 });
-
+   const transactions = await Transaction.find({
+  userId: req.user._id,
+})
+  .sort({ createdAt: -1 })
+  .limit(100);
     res.json({
       success: true,
       transactions,
@@ -22,9 +23,9 @@ router.get("/", protect, async (req, res) => {
 router.get("/admin", protect, adminOnly, async (req, res) => {
   try {
     const transactions = await Transaction.find()
-      .sort({ createdAt: -1 })
-      .limit(200);
-
+.populate("userId", "name email")
+.sort({ createdAt: -1 })
+.limit(100);
     res.json({
       success: true,
       transactions,

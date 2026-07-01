@@ -3,7 +3,8 @@ const mongoose = require("mongoose");
 const kycSchema = new mongoose.Schema(
   {
     userId: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
       unique: true,
       index: true,
@@ -13,6 +14,7 @@ const kycSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 120,
     },
 
     email: {
@@ -25,14 +27,16 @@ const kycSchema = new mongoose.Schema(
 
     phone: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
+      maxlength: 40,
     },
 
     country: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 80,
     },
 
     idType: {
@@ -41,10 +45,12 @@ const kycSchema = new mongoose.Schema(
       default: "CNIC",
       required: true,
     },
+
     idNumber: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 80,
     },
 
     cnicFront: {
@@ -71,15 +77,25 @@ const kycSchema = new mongoose.Schema(
       type: String,
       enum: ["not_submitted", "pending", "approved", "rejected"],
       default: "pending",
+      index: true,
     },
 
     adminNote: {
       type: String,
       default: "",
+      trim: true,
+      maxlength: 500,
+    },
+
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
 
     reviewedAt: {
       type: Date,
+      default: null,
     },
   },
   {

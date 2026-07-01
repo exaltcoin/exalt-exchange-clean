@@ -22,6 +22,33 @@ const depositSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
+    email: {
+  type: String,
+  default: "",
+  trim: true,
+  lowercase: true,
+  index: true,
+},
+
+coin: {
+  type: String,
+  default: "USDT",
+  uppercase: true,
+  trim: true,
+  index: true,
+},
+
+transactionId: {
+  type: String,
+  default: "",
+  trim: true,
+},
+
+proofUrl: {
+  type: String,
+  default: "",
+  trim: true,
+},
 paymentMethod: {
   type: String,
   enum: ["EASYPAISA", "JAZZCASH", "BANK", "CRYPTO"],
@@ -87,11 +114,13 @@ adminRemark: {
   trim: true,
   maxlength: 500,
 },
-    network: {
-      type: String,
-      default: "BSC",
-      trim: true,
-    },
+   network: {
+  type: String,
+  enum: ["BSC", "ERC20", "TRC20", "SOL"],
+  default: "BSC",
+  uppercase: true,
+  trim: true,
+},
 
     status: {
       type: String,

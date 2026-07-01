@@ -1,4 +1,6 @@
 const express = require("express");
+const router = express.Router();
+
 const {
   getAllStakes,
   getStakingSummary,
@@ -7,7 +9,11 @@ const {
 
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 
-const router = express.Router();
+/*
+=========================================
+ADMIN STAKING
+=========================================
+*/
 
 router.get("/", protect, adminOnly, getAllStakes);
 
